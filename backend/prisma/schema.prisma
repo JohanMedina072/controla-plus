@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MovementType {
+  INCOME
+  EXPENSE
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  categories     Category[]
+  paymentMethods PaymentMethod[]
+  movements      Movement[]
+}
+
+model Category {
+  id        String     @id @default(uuid()) @db.Uuid
+  name      String
+  type      String
+  userId    String     @db.Uuid
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movements Movement[]
+
+  @@unique([name, userId])
+}
+
+model PaymentMethod {
+  id        String     @id @default(uuid()) @db.Uuid
+  name      String
+  userId    String     @db.Uuid
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movements Movement[]
+}
+
+model Movement {
+  id          String       @id @default(uuid()) @db.Uuid
+  type        MovementType
+  amount      Decimal      @db.Decimal(10, 2)
+  description String?
+  date        DateTime     @default(now())
+
+  userId          String @db.Uuid
+  categoryId      String @db.Uuid
+  paymentMethodId String @db.Uuid
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category      Category      @relation(fields: [categoryId], references: [id])
+  paymentMethod PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+}
