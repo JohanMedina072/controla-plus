@@ -2,10 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 
 const API_URL = 'http://localhost:3000/api/movements'
-
+const CATALOG_URL = 'http://localhost:3000/api/catalog'
 const USER_ID = '74b90258-dcdd-47a7-ba59-55ebcca23df4'
-const CATEGORY_ID = '877aa249-a629-450f-99a2-f25072fbcb28'
-const PAYMENT_METHOD_ID = '670489e5-84d1-4724-b01e-f67e78432917'
 
 const formatMoney = (value) =>
   new Intl.NumberFormat('es-PE', {
@@ -15,37 +13,62 @@ const formatMoney = (value) =>
 
 function App() {
   const [movements, setMovements] = useState([])
+  const [categories, setCategories] = useState([])
+  const [paymentMethods, setPaymentMethods] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
-
   const [formData, setFormData] = useState({
     type: 'EXPENSE',
     amount: '',
     description: '',
+    categoryId: '',
+    paymentMethodId: '',
   })
 
   useEffect(() => {
-    fetch(API_URL)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('No se pudieron obtener los movimientos')
-        }
+  const loadData = async () => {
+    try {
+      const [movementsResponse, catalogResponse] = await Promise.all([
+        fetch(API_URL),
+        fetch(`${CATALOG_URL}?userId=${USER_ID}`),
+      ])
 
-        return response.json()
-      })
-      .then((result) => {
-        setMovements(result.data || [])
-      })
-      .catch(() => {
-        setError('No se pudo conectar con el backend')
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [])
+      if (!movementsResponse.ok) {
+        throw new Error('No se pudieron obtener los movimientos')
+      }
+
+      if (!catalogResponse.ok) {
+        throw new Error('No se pudo obtener el catálogo')
+      }
+
+      const movementsResult = await movementsResponse.json()
+      const catalogResult = await catalogResponse.json()
+
+      setMovements(movementsResult.data)
+      setCategories(catalogResult.data.categories)
+      setPaymentMethods(catalogResult.data.paymentMethods)
+
+      const firstExpenseCategory = catalogResult.data.categories.find(
+        (category) => category.type === 'EXPENSE',
+      )
+
+      setFormData((current) => ({
+        ...current,
+        categoryId: firstExpenseCategory?.id || '',
+        paymentMethodId: catalogResult.data.paymentMethods[0]?.id || '',
+      }))
+    } catch (error) {
+      setError(error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+    loadData()
+}, [])
 
   const totals = useMemo(() => {
     return movements.reduce(
@@ -69,10 +92,24 @@ function App() {
   const handleChange = (event) => {
     const { name, value } = event.target
 
-    setFormData((current) => ({
-      ...current,
-      [name]: value,
-    }))
+    setFormData((current) => {
+      if (name === 'type') {
+        const firstCategory = categories.find(
+          (category) => category.type === value,
+        )
+
+        return {
+          ...current,
+          type: value,
+          categoryId: firstCategory?.id || '',
+        }
+      }
+
+      return {
+        ...current,
+        [name]: value,
+      }
+    })
   }
 
   const handleSubmit = async (event) => {
@@ -97,8 +134,8 @@ function App() {
           amount: Number(formData.amount),
           description: formData.description,
           userId: USER_ID,
-          categoryId: CATEGORY_ID,
-          paymentMethodId: PAYMENT_METHOD_ID,
+          categoryId: formData.categoryId,
+          paymentMethodId: formData.paymentMethodId,
         }),
       })
 
@@ -114,8 +151,11 @@ function App() {
         type: 'EXPENSE',
         amount: '',
         description: '',
+        categoryId:
+          categories.find((category) => category.type === 'EXPENSE')?.id || '',
+        paymentMethodId: paymentMethods[0]?.id || '',
       })
-
+      
       setIsFormOpen(false)
       setMessage('Movimiento guardado correctamente.')
     } catch (submissionError) {
@@ -179,6 +219,45 @@ function App() {
                 placeholder="Ejemplo: Pasaje"
               />
             </label>
+            <label>
+            Categoría
+            <select
+              name="categoryId"
+              value={formData.categoryId}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Selecciona una categoría</option>
+
+              {categories
+                .filter((category) => category.type === formData.type)
+                .map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+
+            <label>
+              Método de pago
+              <select
+                name="paymentMethodId"
+                value={formData.paymentMethodId}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Selecciona un método</option>
+
+                {paymentMethods.map((method) => (
+                  <option key={method.id} value={method.id}>
+                    {method.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          
+                
 
             <div className="form-actions">
               <button type="submit" className="primary-button" disabled={saving}>

@@ -5,6 +5,7 @@ require("dotenv").config();
 const healthRoutes = require("./routes/health.routes");
 const databaseRoutes = require("./routes/database.routes");
 const movementRoutes = require("./routes/movement.routes");
+const catalogRoutes = require("./routes/catalog.routes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,6 +18,7 @@ app.use(express.json());
 app.use("/api/health", healthRoutes);
 app.use("/api/db-test", databaseRoutes);
 app.use("/api/movements", movementRoutes);
+app.use("/api/catalog", catalogRoutes);
 
 // Iniciar servidor
 app.listen(PORT, () => {
