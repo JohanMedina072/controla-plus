@@ -18,8 +18,10 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingMovementId, setEditingMovementId] = useState(null)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+
   const [formData, setFormData] = useState({
     type: 'EXPENSE',
     amount: '',
@@ -29,46 +31,47 @@ function App() {
   })
 
   useEffect(() => {
-  const loadData = async () => {
-    try {
-      const [movementsResponse, catalogResponse] = await Promise.all([
-        fetch(API_URL),
-        fetch(`${CATALOG_URL}?userId=${USER_ID}`),
-      ])
+    const loadData = async () => {
+      try {
+        const [movementsResponse, catalogResponse] = await Promise.all([
+          fetch(API_URL),
+          fetch(`${CATALOG_URL}?userId=${USER_ID}`),
+        ])
 
-      if (!movementsResponse.ok) {
-        throw new Error('No se pudieron obtener los movimientos')
+        if (!movementsResponse.ok) {
+          throw new Error('No se pudieron obtener los movimientos')
+        }
+
+        if (!catalogResponse.ok) {
+          throw new Error('No se pudo obtener el catálogo')
+        }
+
+        const movementsResult = await movementsResponse.json()
+        const catalogResult = await catalogResponse.json()
+
+        setMovements(movementsResult.data)
+        setCategories(catalogResult.data.categories)
+        setPaymentMethods(catalogResult.data.paymentMethods)
+
+        const firstExpenseCategory = catalogResult.data.categories.find(
+          (category) => category.type === 'EXPENSE',
+        )
+
+        setFormData((current) => ({
+          ...current,
+          categoryId: firstExpenseCategory?.id || '',
+          paymentMethodId:
+            catalogResult.data.paymentMethods[0]?.id || '',
+        }))
+      } catch (loadError) {
+        setError(loadError.message)
+      } finally {
+        setLoading(false)
       }
-
-      if (!catalogResponse.ok) {
-        throw new Error('No se pudo obtener el catálogo')
-      }
-
-      const movementsResult = await movementsResponse.json()
-      const catalogResult = await catalogResponse.json()
-
-      setMovements(movementsResult.data)
-      setCategories(catalogResult.data.categories)
-      setPaymentMethods(catalogResult.data.paymentMethods)
-
-      const firstExpenseCategory = catalogResult.data.categories.find(
-        (category) => category.type === 'EXPENSE',
-      )
-
-      setFormData((current) => ({
-        ...current,
-        categoryId: firstExpenseCategory?.id || '',
-        paymentMethodId: catalogResult.data.paymentMethods[0]?.id || '',
-      }))
-    } catch (error) {
-      setError(error.message)
-    } finally {
-      setLoading(false)
     }
-  }
 
     loadData()
-}, [])
+  }, [])
 
   const totals = useMemo(() => {
     return movements.reduce(
@@ -88,6 +91,32 @@ function App() {
   }, [movements])
 
   const balance = totals.income - totals.expenses
+
+  const resetForm = () => {
+    setFormData({
+      type: 'EXPENSE',
+      amount: '',
+      description: '',
+      categoryId:
+        categories.find((category) => category.type === 'EXPENSE')?.id || '',
+      paymentMethodId: paymentMethods[0]?.id || '',
+    })
+
+    setEditingMovementId(null)
+  }
+
+  const handleNewMovement = () => {
+    resetForm()
+    setMessage('')
+    setError('')
+    setIsFormOpen(true)
+  }
+
+  const handleCancel = () => {
+    resetForm()
+    setMessage('')
+    setIsFormOpen(false)
+  }
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -112,9 +141,25 @@ function App() {
     })
   }
 
+  const handleEdit = (movement) => {
+    setFormData({
+      type: movement.type,
+      amount: movement.amount,
+      description: movement.description || '',
+      categoryId: movement.categoryId,
+      paymentMethodId: movement.paymentMethodId,
+    })
+
+    setEditingMovementId(movement.id)
+    setIsFormOpen(true)
+    setMessage('')
+    setError('')
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setMessage('')
+    setError('')
 
     if (!formData.amount || Number(formData.amount) <= 0) {
       setMessage('Ingresa un monto mayor que cero.')
@@ -124,42 +169,60 @@ function App() {
     try {
       setSaving(true)
 
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const isEditing = Boolean(editingMovementId)
+
+      const response = await fetch(
+        isEditing ? `${API_URL}/${editingMovementId}` : API_URL,
+        {
+          method: isEditing ? 'PUT' : 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: formData.type,
+            amount: Number(formData.amount),
+            description: formData.description,
+            userId: USER_ID,
+            categoryId: formData.categoryId,
+            paymentMethodId: formData.paymentMethodId,
+          }),
         },
-        body: JSON.stringify({
-          type: formData.type,
-          amount: Number(formData.amount),
-          description: formData.description,
-          userId: USER_ID,
-          categoryId: formData.categoryId,
-          paymentMethodId: formData.paymentMethodId,
-        }),
-      })
+      )
 
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.message || 'No se pudo guardar el movimiento')
+        throw new Error(
+          result.message || 'No se pudo guardar el movimiento',
+        )
       }
 
-      setMovements((current) => [result.data, ...current])
+      if (isEditing) {
+        setMovements((current) =>
+          current.map((movement) =>
+            movement.id === editingMovementId
+              ? result.data
+              : movement,
+          ),
+        )
+      } else {
+        setMovements((current) => [result.data, ...current])
+      }
 
-      setFormData({
-        type: 'EXPENSE',
-        amount: '',
-        description: '',
-        categoryId:
-          categories.find((category) => category.type === 'EXPENSE')?.id || '',
-        paymentMethodId: paymentMethods[0]?.id || '',
-      })
-      
+      resetForm()
       setIsFormOpen(false)
-      setMessage('Movimiento guardado correctamente.')
-    } catch (submissionError) {
-      setMessage(submissionError.message)
+
+      setMessage(
+        isEditing
+          ? 'Movimiento actualizado correctamente.'
+          : 'Movimiento guardado correctamente.',
+      )
+    } catch (submitError) {
+      console.error(submitError)
+      setMessage(
+        submitError.message ||
+          'Ocurrió un error al guardar el movimiento.',
+      )
     } finally {
       setSaving(false)
     }
@@ -167,34 +230,34 @@ function App() {
 
   const handleDelete = async (movementId) => {
     const confirmed = window.confirm(
-      "¿Seguro que deseas eliminar este movimiento?",
-    );
+      '¿Seguro que deseas eliminar este movimiento?',
+    )
 
-    if (!confirmed) return;
+    if (!confirmed) return
 
     try {
       const response = await fetch(`${API_URL}/${movementId}`, {
-        method: "DELETE",
-      });
+        method: 'DELETE',
+      })
 
-      const result = await response.json();
+      const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.message || "No se pudo eliminar el movimiento");
+        throw new Error(
+          result.message || 'No se pudo eliminar el movimiento',
+        )
       }
 
       setMovements((current) =>
         current.filter((movement) => movement.id !== movementId),
-      );
+      )
 
-      setMessage("Movimiento eliminado correctamente.");
+      setMessage('Movimiento eliminado correctamente.')
     } catch (deleteError) {
-      setError(deleteError.message);
+      console.error(deleteError)
+      setError(deleteError.message)
     }
-  };  
-
-
-
+  }
 
   return (
     <main className="app">
@@ -208,7 +271,7 @@ function App() {
         <button
           type="button"
           className="primary-button"
-          onClick={() => setIsFormOpen((current) => !current)}
+          onClick={handleNewMovement}
         >
           + Nuevo movimiento
         </button>
@@ -216,12 +279,20 @@ function App() {
 
       {isFormOpen && (
         <section className="form-section">
-          <h2>Registrar movimiento</h2>
+          <h2>
+            {editingMovementId
+              ? 'Editar movimiento'
+              : 'Registrar movimiento'}
+          </h2>
 
           <form onSubmit={handleSubmit}>
             <label>
               Tipo
-              <select name="type" value={formData.type} onChange={handleChange}>
+              <select
+                name="type"
+                value={formData.type}
+                onChange={handleChange}
+              >
                 <option value="EXPENSE">Gasto</option>
                 <option value="INCOME">Ingreso</option>
               </select>
@@ -250,25 +321,26 @@ function App() {
                 placeholder="Ejemplo: Pasaje"
               />
             </label>
-            <label>
-            Categoría
-            <select
-              name="categoryId"
-              value={formData.categoryId}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Selecciona una categoría</option>
 
-              {categories
-                .filter((category) => category.type === formData.type)
-                .map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-            </select>
-          </label>
+            <label>
+              Categoría
+              <select
+                name="categoryId"
+                value={formData.categoryId}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Selecciona una categoría</option>
+
+                {categories
+                  .filter((category) => category.type === formData.type)
+                  .map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
 
             <label>
               Método de pago
@@ -287,18 +359,24 @@ function App() {
                 ))}
               </select>
             </label>
-          
-                
 
             <div className="form-actions">
-              <button type="submit" className="primary-button" disabled={saving}>
-                {saving ? 'Guardando...' : 'Guardar movimiento'}
+              <button
+                type="submit"
+                className="primary-button"
+                disabled={saving}
+              >
+                {saving
+                  ? 'Guardando...'
+                  : editingMovementId
+                    ? 'Actualizar movimiento'
+                    : 'Guardar movimiento'}
               </button>
 
               <button
                 type="button"
                 className="secondary-button"
-                onClick={() => setIsFormOpen(false)}
+                onClick={handleCancel}
               >
                 Cancelar
               </button>
@@ -307,6 +385,10 @@ function App() {
             {message && <p className="form-message">{message}</p>}
           </form>
         </section>
+      )}
+
+      {!isFormOpen && message && (
+        <p className="form-message">{message}</p>
       )}
 
       <section className="summary-grid">
@@ -345,17 +427,29 @@ function App() {
             {movements.map((movement) => (
               <article className="movement-item" key={movement.id}>
                 <div>
-                  <strong>{movement.description || 'Sin descripción'}</strong>
-                  <span>{movement.category?.name || 'Comida'}</span>
+                  <strong>
+                    {movement.description || 'Sin descripción'}
+                  </strong>
+                  <span>{movement.category?.name || 'Sin categoría'}</span>
                 </div>
 
                 <div className="movement-actions">
                   <strong
-                    className={movement.type === "INCOME" ? "income" : "expense"}
+                    className={
+                      movement.type === 'INCOME' ? 'income' : 'expense'
+                    }
                   >
-                    {movement.type === "INCOME" ? "+" : "-"}
+                    {movement.type === 'INCOME' ? '+' : '-'}
                     {formatMoney(movement.amount)}
                   </strong>
+
+                  <button
+                    type="button"
+                    className="edit-button"
+                    onClick={() => handleEdit(movement)}
+                  >
+                    Editar
+                  </button>
 
                   <button
                     type="button"

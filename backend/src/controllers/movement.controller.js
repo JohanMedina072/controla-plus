@@ -117,12 +117,74 @@ const deleteMovement = async (req, res) => {
   }
 };
 
+const updateMovement = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      type,
+      amount,
+      description,
+      date,
+      categoryId,
+      paymentMethodId,
+    } = req.body;
 
+    if (!type || amount === undefined || !categoryId || !paymentMethodId) {
+      return res.status(400).json({
+        ok: false,
+        message: "type, amount, categoryId y paymentMethodId son obligatorios",
+      });
+    }
+
+    if (!["INCOME", "EXPENSE"].includes(type)) {
+      return res.status(400).json({
+        ok: false,
+        message: "type debe ser INCOME o EXPENSE",
+      });
+    }
+
+    if (Number(amount) <= 0) {
+      return res.status(400).json({
+        ok: false,
+        message: "amount debe ser mayor que cero",
+      });
+    }
+
+    const movement = await movementService.updateMovement(id, {
+      type,
+      amount,
+      description,
+      date,
+      categoryId,
+      paymentMethodId,
+    });
+
+    res.json({
+      ok: true,
+      message: "Movimiento actualizado correctamente",
+      data: movement,
+    });
+  } catch (error) {
+    console.error("Error al actualizar movimiento:", error);
+
+    if (error.code === "P2025") {
+      return res.status(404).json({
+        ok: false,
+        message: "Movimiento no encontrado",
+      });
+    }
+
+    res.status(500).json({
+      ok: false,
+      message: "No se pudo actualizar el movimiento",
+    });
+  }
+};
 
 
 module.exports = {
   listMovements,
   createMovement,
   deleteMovement,
-
+  updateMovement,
 };

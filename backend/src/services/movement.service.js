@@ -38,9 +38,27 @@ const deleteMovement = async (id) => {
   });
 }
 
+const updateMovement = async (id, data) => {
+  return prisma.movement.update({
+    where: { id },
+    data: {
+      type: data.type,
+      amount: data.amount.toString(),
+      description: data.description || null,
+      date: data.date ? new Date(data.date) : undefined,
+      categoryId: data.categoryId,
+      paymentMethodId: data.paymentMethodId,
+    },
+    include: {
+      category: true,
+      paymentMethod: true,
+    },
+  });
+};
+
 module.exports = {
   getAllMovements,
   createMovement,
   deleteMovement,
-
+  updateMovement,
 };
