@@ -30,7 +30,17 @@ const createMovement = async (data) => {
   });
 };
 
+const deleteMovement = async (id) => {
+  return prisma.movement.delete({
+    where: {
+      id,
+    },
+  });
+}
+
 module.exports = {
   getAllMovements,
   createMovement,
+  deleteMovement,
+
 };

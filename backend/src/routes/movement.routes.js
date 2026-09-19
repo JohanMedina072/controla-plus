@@ -5,5 +5,6 @@ const router = express.Router();
 
 router.get("/", movementController.listMovements);
 router.post("/", movementController.createMovement);
+router.delete("/:id", movementController.deleteMovement);
 
 module.exports = router;

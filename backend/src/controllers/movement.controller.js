@@ -83,7 +83,46 @@ const createMovement = async (req, res) => {
   }
 };
 
+const deleteMovement = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        ok: false,
+        message: "El id del movimiento es obligatorio",
+      });
+    }
+
+    await movementService.deleteMovement(id);
+
+    res.json({
+      ok: true,
+      message: "Movimiento eliminado correctamente",
+    });
+  } catch (error) {
+    console.error("Error al eliminar movimiento:", error);
+
+    if (error.code === "P2025") {
+      return res.status(404).json({
+        ok: false,
+        message: "Movimiento no encontrado",
+      });
+    }
+
+    res.status(500).json({
+      ok: false,
+      message: "No se pudo eliminar el movimiento",
+    });
+  }
+};
+
+
+
+
 module.exports = {
   listMovements,
   createMovement,
+  deleteMovement,
+
 };

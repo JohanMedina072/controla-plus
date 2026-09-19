@@ -165,6 +165,37 @@ function App() {
     }
   }
 
+  const handleDelete = async (movementId) => {
+    const confirmed = window.confirm(
+      "¿Seguro que deseas eliminar este movimiento?",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`${API_URL}/${movementId}`, {
+        method: "DELETE",
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "No se pudo eliminar el movimiento");
+      }
+
+      setMovements((current) =>
+        current.filter((movement) => movement.id !== movementId),
+      );
+
+      setMessage("Movimiento eliminado correctamente.");
+    } catch (deleteError) {
+      setError(deleteError.message);
+    }
+  };  
+
+
+
+
   return (
     <main className="app">
       <header className="header">
@@ -318,14 +349,22 @@ function App() {
                   <span>{movement.category?.name || 'Comida'}</span>
                 </div>
 
-                <strong
-                  className={
-                    movement.type === 'INCOME' ? 'income' : 'expense'
-                  }
-                >
-                  {movement.type === 'INCOME' ? '+' : '-'}
-                  {formatMoney(movement.amount)}
-                </strong>
+                <div className="movement-actions">
+                  <strong
+                    className={movement.type === "INCOME" ? "income" : "expense"}
+                  >
+                    {movement.type === "INCOME" ? "+" : "-"}
+                    {formatMoney(movement.amount)}
+                  </strong>
+
+                  <button
+                    type="button"
+                    className="delete-button"
+                    onClick={() => handleDelete(movement.id)}
+                  >
+                    Eliminar
+                  </button>
+                </div>
               </article>
             ))}
           </div>
