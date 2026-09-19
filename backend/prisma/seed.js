@@ -21,6 +21,8 @@ async function main() {
     { name: "Salud", type: "EXPENSE" },
     { name: "Estudios", type: "EXPENSE" },
     { name: "Mudanzas", type: "INCOME" },
+    { name: "taxi", type: "INCOME" },
+    { name: "Marketplace", type: "INCOME" },
     { name: "Otros", type: "EXPENSE" },
   ];
 
