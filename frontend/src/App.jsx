@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
+import Header from './components/layout/Header'
+import SummaryCards from './components/dashboard/SummaryCards'
+import MovementList from './components/movements/MovementList'
+import MovementForm from './components/movements/MovementForm'
+
 
 const API_URL = 'http://localhost:3000/api/movements'
 const CATALOG_URL = 'http://localhost:3000/api/catalog'
 const USER_ID = '74b90258-dcdd-47a7-ba59-55ebcca23df4'
+
 
 const formatMoney = (value) =>
   new Intl.NumberFormat('es-PE', {
@@ -261,152 +267,37 @@ function App() {
 
   return (
     <main className="app">
-      <header className="header">
-        <div>
-          <p className="eyebrow">CONTROL FINANCIERO PERSONAL</p>
-          <h1>Controla+</h1>
-          <p>Hola, Johan. Aquí tienes un resumen de tus movimientos.</p>
-        </div>
-
-        <button
-          type="button"
-          className="primary-button"
-          onClick={handleNewMovement}
-        >
-          + Nuevo movimiento
-        </button>
-      </header>
-
+        <Header
+          onToggleForm={() => setIsFormOpen((current) => !current)}
+        />
       {isFormOpen && (
-        <section className="form-section">
-          <h2>
-            {editingMovementId
-              ? 'Editar movimiento'
-              : 'Registrar movimiento'}
-          </h2>
-
-          <form onSubmit={handleSubmit}>
-            <label>
-              Tipo
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-              >
-                <option value="EXPENSE">Gasto</option>
-                <option value="INCOME">Ingreso</option>
-              </select>
-            </label>
-
-            <label>
-              Monto
-              <input
-                type="number"
-                name="amount"
-                min="0.01"
-                step="0.01"
-                value={formData.amount}
-                onChange={handleChange}
-                placeholder="Ejemplo: 25"
-              />
-            </label>
-
-            <label>
-              Descripción
-              <input
-                type="text"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                placeholder="Ejemplo: Pasaje"
-              />
-            </label>
-
-            <label>
-              Categoría
-              <select
-                name="categoryId"
-                value={formData.categoryId}
-                onChange={handleChange}
-                required
-              >
-                <option value="">Selecciona una categoría</option>
-
-                {categories
-                  .filter((category) => category.type === formData.type)
-                  .map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-
-            <label>
-              Método de pago
-              <select
-                name="paymentMethodId"
-                value={formData.paymentMethodId}
-                onChange={handleChange}
-                required
-              >
-                <option value="">Selecciona un método</option>
-
-                {paymentMethods.map((method) => (
-                  <option key={method.id} value={method.id}>
-                    {method.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <div className="form-actions">
-              <button
-                type="submit"
-                className="primary-button"
-                disabled={saving}
-              >
-                {saving
-                  ? 'Guardando...'
-                  : editingMovementId
-                    ? 'Actualizar movimiento'
-                    : 'Guardar movimiento'}
-              </button>
-
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={handleCancel}
-              >
-                Cancelar
-              </button>
-            </div>
-
-            {message && <p className="form-message">{message}</p>}
-          </form>
-        </section>
+        <MovementForm
+          formData={formData}
+          categories={categories}
+          paymentMethods={paymentMethods}
+          onChange={handleChange}
+          onSubmit={handleSubmit}
+          onCancel={() => {
+            setIsFormOpen(false)
+            setEditingMovementId(null)
+            setMessage('')
+          }}  
+          saving={saving}
+          message={message}
+          isEditing={Boolean(editingMovementId)}
+        />
       )}
 
       {!isFormOpen && message && (
         <p className="form-message">{message}</p>
       )}
 
-      <section className="summary-grid">
-        <article className="summary-card">
-          <span>Balance</span>
-          <strong>{formatMoney(balance)}</strong>
-        </article>
-
-        <article className="summary-card">
-          <span>Ingresos</span>
-          <strong>{formatMoney(totals.income)}</strong>
-        </article>
-
-        <article className="summary-card">
-          <span>Gastos</span>
-          <strong>{formatMoney(totals.expenses)}</strong>
-        </article>
-      </section>
+      <SummaryCards
+        balance={balance}
+        income={totals.income}
+        expenses={totals.expenses}
+        formatMoney={formatMoney}
+      />
 
       <section className="movements-section">
         <div className="section-title">
@@ -423,45 +314,12 @@ function App() {
         )}
 
         {!loading && !error && movements.length > 0 && (
-          <div className="movement-list">
-            {movements.map((movement) => (
-              <article className="movement-item" key={movement.id}>
-                <div>
-                  <strong>
-                    {movement.description || 'Sin descripción'}
-                  </strong>
-                  <span>{movement.category?.name || 'Sin categoría'}</span>
-                </div>
-
-                <div className="movement-actions">
-                  <strong
-                    className={
-                      movement.type === 'INCOME' ? 'income' : 'expense'
-                    }
-                  >
-                    {movement.type === 'INCOME' ? '+' : '-'}
-                    {formatMoney(movement.amount)}
-                  </strong>
-
-                  <button
-                    type="button"
-                    className="edit-button"
-                    onClick={() => handleEdit(movement)}
-                  >
-                    Editar
-                  </button>
-
-                  <button
-                    type="button"
-                    className="delete-button"
-                    onClick={() => handleDelete(movement.id)}
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
+          <MovementList
+            movements={movements}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            formatMoney={formatMoney}
+          />
         )}
       </section>
     </main>

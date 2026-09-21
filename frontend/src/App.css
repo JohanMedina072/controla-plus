@@ -263,3 +263,35 @@ h1 {
 .delete-button:hover {
   text-decoration: underline;
 }
+
+.edit-button,
+.delete-button {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.edit-button {
+  color: #2563eb;
+}
+
+.edit-button:hover {
+  text-decoration: underline;
+}
+
+.delete-button {
+  color: #dc2626;
+}
+
+.delete-button:hover {
+  text-decoration: underline;
+}
+
+.movement-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
