@@ -1,14 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
+
 import Header from './components/layout/Header'
 import SummaryCards from './components/dashboard/SummaryCards'
 import MovementList from './components/movements/MovementList'
 import MovementForm from './components/movements/MovementForm'
 
 import formatMoney from './utils/formatMoney'
-import { API_URL, CATALOG_URL, USER_ID } from './services/api'
+import { USER_ID } from './services/api'
 
-
+import {
+  getCatalog,
+  getMovements,
+  removeMovement,
+  saveMovement,
+} from './services/movement.service'
 
 function App() {
   const [movements, setMovements] = useState([])
@@ -29,48 +35,38 @@ function App() {
     paymentMethodId: '',
   })
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [movementsResponse, catalogResponse] = await Promise.all([
-          fetch(API_URL),
-          fetch(`${CATALOG_URL}?userId=${USER_ID}`),
-        ])
+useEffect(() => {
+  const loadData = async () => {
+    try {
+      const [movementsResult, catalogResult] = await Promise.all([
+        getMovements(),
+        getCatalog(USER_ID),
+      ])
 
-        if (!movementsResponse.ok) {
-          throw new Error('No se pudieron obtener los movimientos')
-        }
+      setMovements(movementsResult)
+      setCategories(catalogResult.categories)
+      setPaymentMethods(catalogResult.paymentMethods)
 
-        if (!catalogResponse.ok) {
-          throw new Error('No se pudo obtener el catálogo')
-        }
+      const firstExpenseCategory = catalogResult.categories.find(
+        (category) => category.type === 'EXPENSE',
+      )
 
-        const movementsResult = await movementsResponse.json()
-        const catalogResult = await catalogResponse.json()
-
-        setMovements(movementsResult.data)
-        setCategories(catalogResult.data.categories)
-        setPaymentMethods(catalogResult.data.paymentMethods)
-
-        const firstExpenseCategory = catalogResult.data.categories.find(
-          (category) => category.type === 'EXPENSE',
-        )
-
-        setFormData((current) => ({
-          ...current,
-          categoryId: firstExpenseCategory?.id || '',
-          paymentMethodId:
-            catalogResult.data.paymentMethods[0]?.id || '',
-        }))
-      } catch (loadError) {
-        setError(loadError.message)
-      } finally {
-        setLoading(false)
-      }
+      setFormData((current) => ({
+        ...current,
+        categoryId: firstExpenseCategory?.id || '',
+        paymentMethodId: catalogResult.paymentMethods[0]?.id || '',
+      }))
+    } catch (error) {
+      setError(error.message)
+    } finally {
+      setLoading(false)
     }
+  }
 
-    loadData()
-  }, [])
+  loadData()
+}, [])
+
+
 
   const totals = useMemo(() => {
     return movements.reduce(
@@ -170,30 +166,18 @@ function App() {
 
       const isEditing = Boolean(editingMovementId)
 
-      const response = await fetch(
-        isEditing ? `${API_URL}/${editingMovementId}` : API_URL,
-        {
-          method: isEditing ? 'PUT' : 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+      const result = {
+        data: await saveMovement({
+          movementId: isEditing ? editingMovementId : null,
+          data: {
             type: formData.type,
             amount: Number(formData.amount),
             description: formData.description,
             userId: USER_ID,
             categoryId: formData.categoryId,
             paymentMethodId: formData.paymentMethodId,
-          }),
-        },
-      )
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(
-          result.message || 'No se pudo guardar el movimiento',
-        )
+          },
+        }),
       }
 
       if (isEditing) {
@@ -235,17 +219,7 @@ function App() {
     if (!confirmed) return
 
     try {
-      const response = await fetch(`${API_URL}/${movementId}`, {
-        method: 'DELETE',
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(
-          result.message || 'No se pudo eliminar el movimiento',
-        )
-      }
+      await removeMovement(movementId)
 
       setMovements((current) =>
         current.filter((movement) => movement.id !== movementId),
@@ -253,16 +227,13 @@ function App() {
 
       setMessage('Movimiento eliminado correctamente.')
     } catch (deleteError) {
-      console.error(deleteError)
       setError(deleteError.message)
     }
   }
 
   return (
     <main className="app">
-        <Header
-          onToggleForm={() => setIsFormOpen((current) => !current)}
-        />
+      <Header onToggleForm={handleNewMovement} /> 
       {isFormOpen && (
         <MovementForm
           formData={formData}
@@ -270,11 +241,7 @@ function App() {
           paymentMethods={paymentMethods}
           onChange={handleChange}
           onSubmit={handleSubmit}
-          onCancel={() => {
-            setIsFormOpen(false)
-            setEditingMovementId(null)
-            setMessage('')
-          }}  
+          onCancel={handleCancel}
           saving={saving}
           message={message}
           isEditing={Boolean(editingMovementId)}
