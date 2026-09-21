@@ -5,17 +5,10 @@ import SummaryCards from './components/dashboard/SummaryCards'
 import MovementList from './components/movements/MovementList'
 import MovementForm from './components/movements/MovementForm'
 
-
-const API_URL = 'http://localhost:3000/api/movements'
-const CATALOG_URL = 'http://localhost:3000/api/catalog'
-const USER_ID = '74b90258-dcdd-47a7-ba59-55ebcca23df4'
+import formatMoney from './utils/formatMoney'
+import { API_URL, CATALOG_URL, USER_ID } from './services/api'
 
 
-const formatMoney = (value) =>
-  new Intl.NumberFormat('es-PE', {
-    style: 'currency',
-    currency: 'PEN',
-  }).format(Number(value || 0))
 
 function App() {
   const [movements, setMovements] = useState([])
