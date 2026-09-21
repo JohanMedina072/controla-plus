@@ -28,3 +28,46 @@
     grid-template-columns: 1fr;
   }
 }
+
+.month-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  border: 1px solid #e5eaf2;
+  border-radius: 12px;
+  background: white;
+}
+
+.month-filter label {
+  color: #475569;
+  font-weight: 600;
+}
+
+.month-filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.month-filter input {
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #172033;
+  background: white;
+}
+
+@media (max-width: 700px) {
+  .month-filter {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .month-filter-controls {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}

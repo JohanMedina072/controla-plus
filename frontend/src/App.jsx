@@ -5,6 +5,7 @@ import Header from './components/layout/Header'
 import SummaryCards from './components/dashboard/SummaryCards'
 import MovementList from './components/movements/MovementList'
 import MovementForm from './components/movements/MovementForm'
+import MonthFilter from './components/dashboard/MonthFilter'
 
 import formatMoney from './utils/formatMoney'
 import { USER_ID } from './services/api'
@@ -26,7 +27,8 @@ function App() {
   const [editingMovementId, setEditingMovementId] = useState(null)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
-
+  const [selectedMonth, setSelectedMonth] = useState('')
+  
   const [formData, setFormData] = useState({
     type: 'EXPENSE',
     amount: '',
@@ -66,10 +68,18 @@ useEffect(() => {
   loadData()
 }, [])
 
+  const filteredMovements = useMemo(() => {
+    if (!selectedMonth) {
+      return movements
+    }
 
+    return movements.filter((movement) =>
+      movement.date?.slice(0, 7) === selectedMonth,
+    )
+  }, [movements, selectedMonth])
 
   const totals = useMemo(() => {
-    return movements.reduce(
+    return filteredMovements.reduce(
       (accumulator, movement) => {
         const amount = Number(movement.amount)
 
@@ -83,7 +93,7 @@ useEffect(() => {
       },
       { income: 0, expenses: 0 },
     )
-  }, [movements])
+  }, [filteredMovements])
 
   const balance = totals.income - totals.expenses
 
@@ -234,6 +244,11 @@ useEffect(() => {
   return (
     <main className="app">
       <Header onToggleForm={handleNewMovement} /> 
+      <MonthFilter
+        value={selectedMonth}
+        onChange={setSelectedMonth}
+        onClear={() => setSelectedMonth('')}
+      />
       {isFormOpen && (
         <MovementForm
           formData={formData}
@@ -269,13 +284,13 @@ useEffect(() => {
 
         {error && <p className="error">{error}</p>}
 
-        {!loading && !error && movements.length === 0 && (
+        {!loading && !error && filteredMovements.length === 0 && (
           <p>No hay movimientos registrados.</p>
         )}
 
-        {!loading && !error && movements.length > 0 && (
+        {!loading && !error && filteredMovements.length > 0 && (
           <MovementList
-            movements={movements}
+            movements={filteredMovements}
             onEdit={handleEdit}
             onDelete={handleDelete}
             formatMoney={formatMoney}
