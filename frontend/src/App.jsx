@@ -6,6 +6,8 @@ import SummaryCards from './components/dashboard/SummaryCards'
 import MovementList from './components/movements/MovementList'
 import MovementForm from './components/movements/MovementForm'
 import MonthFilter from './components/dashboard/MonthFilter'
+import CategorySummary from './components/dashboard/CategorySummary'
+import ExpenseChart from './components/dashboard/ExpenseChart'
 
 import formatMoney from './utils/formatMoney'
 import { USER_ID } from './services/api'
@@ -28,6 +30,7 @@ function App() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [selectedMonth, setSelectedMonth] = useState('')
+  
   
   const [formData, setFormData] = useState({
     type: 'EXPENSE',
@@ -77,6 +80,36 @@ useEffect(() => {
       movement.date?.slice(0, 7) === selectedMonth,
     )
   }, [movements, selectedMonth])
+
+  const categoryTotals = useMemo(() => {
+    const totalsByCategory = filteredMovements
+      .filter((movement) => movement.type === 'EXPENSE')
+      .reduce((accumulator, movement) => {
+        const categoryName = movement.category?.name || 'Sin categoría'
+        const amount = Number(movement.amount)
+
+        accumulator[categoryName] =
+          (accumulator[categoryName] || 0) + amount
+
+        return accumulator
+      }, {})
+
+    const totalExpenses = Object.values(totalsByCategory).reduce(
+      (total, amount) => total + amount,
+      0,
+    )
+
+    return Object.entries(totalsByCategory)
+      .map(([name, amount]) => ({
+        name,
+        amount,
+        percentage: totalExpenses
+          ? (amount / totalExpenses) * 100
+          : 0,
+      }))
+      .sort((first, second) => second.amount - first.amount)
+  }, [filteredMovements])
+
 
   const totals = useMemo(() => {
     return filteredMovements.reduce(
@@ -271,6 +304,14 @@ useEffect(() => {
         balance={balance}
         income={totals.income}
         expenses={totals.expenses}
+        formatMoney={formatMoney}
+      />
+      <CategorySummary
+        categories={categoryTotals}
+        formatMoney={formatMoney}
+      />
+      <ExpenseChart
+        categories={categoryTotals}
         formatMoney={formatMoney}
       />
 
