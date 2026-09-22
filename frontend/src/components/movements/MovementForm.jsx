@@ -6,6 +6,7 @@ function MovementForm({
   onSubmit,
   onCancel,
   saving,
+  error,
   message,
   isEditing,
 }) {
@@ -28,10 +29,13 @@ function MovementForm({
             type="number"
             name="amount"
             min="0.01"
+            max="99999999.99"
             step="0.01"
             value={formData.amount}
             onChange={onChange}
             placeholder="Ejemplo: 25"
+            required
+            inputMode="decimal"
           />
         </label>
 
@@ -43,6 +47,7 @@ function MovementForm({
             value={formData.description}
             onChange={onChange}
             placeholder="Ejemplo: Pasaje"
+            maxLength={255}
           />
         </label>
 
@@ -98,6 +103,7 @@ function MovementForm({
           </button>
         </div>
 
+        {error && <p className="form-error">{error}</p>}
         {message && <p className="form-message">{message}</p>}
       </form>
     </section>

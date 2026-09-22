@@ -10,9 +10,9 @@ import CategorySummary from './components/dashboard/CategorySummary'
 import ExpenseChart from './components/dashboard/ExpenseChart'
 import MonthlyChart from './components/dashboard/MonthlyChart'
 import exportMovementsToExcel from './utils/exportMovementsToExcel'
+import validateMovement from './utils/validateMovement'
 
 import formatMoney from './utils/formatMoney'
-import { USER_ID } from './services/api'
 
 import {
   getCatalog,
@@ -47,7 +47,7 @@ useEffect(() => {
     try {
       const [movementsResult, catalogResult] = await Promise.all([
         getMovements(),
-        getCatalog(USER_ID),
+        getCatalog(),
       ])
 
       setMovements(movementsResult)
@@ -191,6 +191,7 @@ const monthlyTotals = useMemo(() => {
   const handleCancel = () => {
     resetForm()
     setMessage('')
+    setError('')
     setIsFormOpen(false)
   }
 
@@ -237,8 +238,10 @@ const monthlyTotals = useMemo(() => {
     setMessage('')
     setError('')
 
-    if (!formData.amount || Number(formData.amount) <= 0) {
-      setMessage('Ingresa un monto mayor que cero.')
+    const validationMessage = validateMovement(formData)
+
+    if (validationMessage) {
+      setError(validationMessage)
       return
     }
 
@@ -247,30 +250,27 @@ const monthlyTotals = useMemo(() => {
 
       const isEditing = Boolean(editingMovementId)
 
-      const result = {
-        data: await saveMovement({
-          movementId: isEditing ? editingMovementId : null,
-          data: {
-            type: formData.type,
-            amount: Number(formData.amount),
-            description: formData.description,
-            userId: USER_ID,
-            categoryId: formData.categoryId,
-            paymentMethodId: formData.paymentMethodId,
-          },
-        }),
-      }
+      const result = await saveMovement({
+        movementId: isEditing ? editingMovementId : null,
+        data: {
+          type: formData.type,
+          amount: Number(formData.amount),
+          description: formData.description.trim(),
+          categoryId: formData.categoryId,
+          paymentMethodId: formData.paymentMethodId,
+        },
+      })
 
       if (isEditing) {
         setMovements((current) =>
           current.map((movement) =>
             movement.id === editingMovementId
-              ? result.data
+              ? result
               : movement,
           ),
         )
       } else {
-        setMovements((current) => [result.data, ...current])
+        setMovements((current) => [result, ...current])
       }
 
       resetForm()
@@ -282,8 +282,7 @@ const monthlyTotals = useMemo(() => {
           : 'Movimiento guardado correctamente.',
       )
     } catch (submitError) {
-      console.error(submitError)
-      setMessage(
+      setError(
         submitError.message ||
           'Ocurrió un error al guardar el movimiento.',
       )
@@ -298,6 +297,9 @@ const monthlyTotals = useMemo(() => {
     )
 
     if (!confirmed) return
+
+    setMessage('')
+    setError('')
 
     try {
       await removeMovement(movementId)
@@ -329,6 +331,7 @@ const monthlyTotals = useMemo(() => {
           onSubmit={handleSubmit}
           onCancel={handleCancel}
           saving={saving}
+          error={error}
           message={message}
           isEditing={Boolean(editingMovementId)}
         />
@@ -362,7 +365,9 @@ const monthlyTotals = useMemo(() => {
         <button
           type="button"
           className="export-button"
-          onClick={() => exportMovementsToExcel(filteredMovements)}
+          onClick={() =>
+            exportMovementsToExcel(filteredMovements, selectedMonth)
+          }
           disabled={filteredMovements.length === 0}
         >
           Exportar a Excel

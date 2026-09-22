@@ -1,5 +1,7 @@
-export const API_URL = 'http://localhost:3000/api/movements'
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+).replace(/\/$/, '')
 
-export const CATALOG_URL = 'http://localhost:3000/api/catalog'
+export const API_URL = `${API_BASE_URL}/movements`
 
-export const USER_ID = '74b90258-dcdd-47a7-ba59-55ebcca23df4'
+export const CATALOG_URL = `${API_BASE_URL}/catalog`

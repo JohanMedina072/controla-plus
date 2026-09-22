@@ -1,9 +1,10 @@
 const express = require("express");
 const prisma = require("../config/prisma");
+const AppError = require("../errors/app.error");
 
 const router = express.Router();
 
-router.get("/", async (req, res) => {
+router.get("/", async (req, res, next) => {
   try {
     const result = await prisma.$queryRaw`SELECT NOW() AS current_time`;
 
@@ -13,12 +14,7 @@ router.get("/", async (req, res) => {
       databaseTime: result[0].current_time,
     });
   } catch (error) {
-    console.error("Error de conexión con PostgreSQL:", error);
-
-    res.status(500).json({
-      ok: false,
-      message: "No se pudo conectar con PostgreSQL",
-    });
+    next(new AppError("No se pudo conectar con PostgreSQL", 503, "DATABASE_UNAVAILABLE"));
   }
 });
 

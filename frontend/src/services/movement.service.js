@@ -1,34 +1,26 @@
 import { API_URL, CATALOG_URL } from './api'
-
-const readResponse = async (response, fallbackMessage) => {
-  const result = await response.json()
-
-  if (!response.ok) {
-    throw new Error(result.message || fallbackMessage)
-  }
-
-  return result.data
-}
+import { requestJson } from './http'
 
 export const getMovements = async () => {
-  const response = await fetch(API_URL)
-
-  return readResponse(
-    response,
+  return requestJson(
+    API_URL,
+    {},
     'No se pudieron obtener los movimientos',
   )
 }
 
-export const getCatalog = async (userId) => {
-  const response = await fetch(`${CATALOG_URL}?userId=${userId}`)
-
-  return readResponse(response, 'No se pudo obtener el catálogo')
+export const getCatalog = async () => {
+  return requestJson(
+    CATALOG_URL,
+    {},
+    'No se pudo obtener el catálogo',
+  )
 }
 
 export const saveMovement = async ({ movementId, data }) => {
   const isEditing = Boolean(movementId)
 
-  const response = await fetch(
+  return requestJson(
     isEditing ? `${API_URL}/${movementId}` : API_URL,
     {
       method: isEditing ? 'PUT' : 'POST',
@@ -37,21 +29,16 @@ export const saveMovement = async ({ movementId, data }) => {
       },
       body: JSON.stringify(data),
     },
-  )
-
-  return readResponse(
-    response,
     'No se pudo guardar el movimiento',
   )
 }
 
 export const removeMovement = async (movementId) => {
-  const response = await fetch(`${API_URL}/${movementId}`, {
-    method: 'DELETE',
-  })
-
-  return readResponse(
-    response,
+  return requestJson(
+    `${API_URL}/${movementId}`,
+    {
+      method: 'DELETE',
+    },
     'No se pudo eliminar el movimiento',
   )
 }

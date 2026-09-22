@@ -1,69 +1,56 @@
 const movementService = require("../services/movement.service");
+const { getDefaultUserId } = require("../config/app");
+const {
+  validateMovementId,
+  validateMovementPayload,
+} = require("../validators/movement.validator");
 
-const listMovements = async (req, res) => {
+const listMovements = async (req, res, next) => {
   try {
-    const movements = await movementService.getAllMovements();
+    const movements = await movementService.getAllMovements(getDefaultUserId());
 
     res.json({
       ok: true,
       data: movements,
     });
   } catch (error) {
-    console.error("Error al listar movimientos:", error);
-
-    res.status(500).json({
-      ok: false,
-      message: "No se pudieron obtener los movimientos",
-    });
+    next(error);
   }
 };
 
-const createMovement = async (req, res) => {
+const createMovement = async (req, res, next) => {
   try {
     const {
       type,
       amount,
       description,
       date,
-      userId,
       categoryId,
       paymentMethodId,
     } = req.body;
 
-    if (
-      !type ||
-      amount === undefined ||
-      !userId ||
-      !categoryId ||
-      !paymentMethodId
-    ) {
-      return res.status(400).json({
-        ok: false,
-        message:
-          "type, amount, userId, categoryId y paymentMethodId son obligatorios",
-      });
-    }
+    const validationMessage = validateMovementPayload({
+      type,
+      amount,
+      description,
+      date,
+      categoryId,
+      paymentMethodId,
+    });
 
-    if (!["INCOME", "EXPENSE"].includes(type)) {
+    if (validationMessage) {
       return res.status(400).json({
         ok: false,
-        message: "type debe ser INCOME o EXPENSE",
-      });
-    }
-
-    if (Number(amount) <= 0) {
-      return res.status(400).json({
-        ok: false,
-        message: "amount debe ser mayor que cero",
+        message: validationMessage,
       });
     }
 
     const movement = await movementService.createMovement({
       type,
       amount,
-      description,
+      description: description?.trim(),
       date,
-      userId,
+      userId: getDefaultUserId(),
       categoryId,
       paymentMethodId,
     });
@@ -74,50 +61,35 @@ const createMovement = async (req, res) => {
       data: movement,
     });
   } catch (error) {
-    console.error("Error al crear movimiento:", error);
-
-    res.status(500).json({
-      ok: false,
-      message: "No se pudo crear el movimiento",
-    });
+    next(error);
   }
 };
 
-const deleteMovement = async (req, res) => {
+const deleteMovement = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    if (!id) {
+    const validationMessage = validateMovementId(id);
+
+    if (validationMessage) {
       return res.status(400).json({
         ok: false,
-        message: "El id del movimiento es obligatorio",
+        message: validationMessage,
       });
     }
 
-    await movementService.deleteMovement(id);
+    await movementService.deleteMovement(id, getDefaultUserId());
 
     res.json({
       ok: true,
       message: "Movimiento eliminado correctamente",
     });
   } catch (error) {
-    console.error("Error al eliminar movimiento:", error);
-
-    if (error.code === "P2025") {
-      return res.status(404).json({
-        ok: false,
-        message: "Movimiento no encontrado",
-      });
-    }
-
-    res.status(500).json({
-      ok: false,
-      message: "No se pudo eliminar el movimiento",
-    });
+    next(error);
   }
 };
 
-const updateMovement = async (req, res) => {
+const updateMovement = async (req, res, next) => {
   try {
     const { id } = req.params;
     const {
@@ -129,31 +101,35 @@ const updateMovement = async (req, res) => {
       paymentMethodId,
     } = req.body;
 
-    if (!type || amount === undefined || !categoryId || !paymentMethodId) {
+    const idValidationMessage = validateMovementId(id);
+
+    if (idValidationMessage) {
       return res.status(400).json({
         ok: false,
-        message: "type, amount, categoryId y paymentMethodId son obligatorios",
+        message: idValidationMessage,
       });
     }
 
-    if (!["INCOME", "EXPENSE"].includes(type)) {
-      return res.status(400).json({
-        ok: false,
-        message: "type debe ser INCOME o EXPENSE",
-      });
-    }
-
-    if (Number(amount) <= 0) {
-      return res.status(400).json({
-        ok: false,
-        message: "amount debe ser mayor que cero",
-      });
-    }
-
-    const movement = await movementService.updateMovement(id, {
+    const validationMessage = validateMovementPayload({
       type,
       amount,
       description,
+      date,
+      categoryId,
+      paymentMethodId,
+    });
+
+    if (validationMessage) {
+      return res.status(400).json({
+        ok: false,
+        message: validationMessage,
+      });
+    }
+
+    const movement = await movementService.updateMovement(id, getDefaultUserId(), {
+      type,
+      amount,
+      description: description?.trim(),
       date,
       categoryId,
       paymentMethodId,
@@ -165,19 +141,7 @@ const updateMovement = async (req, res) => {
       data: movement,
     });
   } catch (error) {
-    console.error("Error al actualizar movimiento:", error);
-
-    if (error.code === "P2025") {
-      return res.status(404).json({
-        ok: false,
-        message: "Movimiento no encontrado",
-      });
-    }
-
-    res.status(500).json({
-      ok: false,
-      message: "No se pudo actualizar el movimiento",
-    });
+    next(error);
   }
 };
 

@@ -1,18 +1,12 @@
 const express = require('express')
 const prisma = require('../config/prisma')
+const { getDefaultUserId } = require('../config/app')
 
 const router = express.Router()
 
-router.get('/', async (req, res) => {
+router.get('/', async (req, res, next) => {
   try {
-    const { userId } = req.query
-
-    if (!userId) {
-      return res.status(400).json({
-        ok: false,
-        message: 'userId es requerido',
-      })
-    }
+    const userId = getDefaultUserId()
 
     const [categories, paymentMethods] = await Promise.all([
       prisma.category.findMany({
@@ -33,11 +27,7 @@ router.get('/', async (req, res) => {
       },
     })
   } catch (error) {
-    console.error(error)
-    res.status(500).json({
-      ok: false,
-      message: 'No se pudo cargar el catálogo',
-    })
+    next(error)
   }
 })
 

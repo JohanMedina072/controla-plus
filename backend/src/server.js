@@ -6,6 +6,11 @@ const healthRoutes = require("./routes/health.routes");
 const databaseRoutes = require("./routes/database.routes");
 const movementRoutes = require("./routes/movement.routes");
 const catalogRoutes = require("./routes/catalog.routes");
+const { assertAppConfig } = require("./config/app");
+const {
+  notFoundHandler,
+  errorHandler,
+} = require("./middlewares/error.middleware");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,7 +25,17 @@ app.use("/api/db-test", databaseRoutes);
 app.use("/api/movements", movementRoutes);
 app.use("/api/catalog", catalogRoutes);
 
+app.use(notFoundHandler);
+app.use(errorHandler);
+
 // Iniciar servidor
-app.listen(PORT, () => {
-  console.log(`Servidor ejecutándose en http://localhost:${PORT}`);
-});
+try {
+  assertAppConfig();
+
+  app.listen(PORT, () => {
+    console.log(`Servidor ejecutándose en http://localhost:${PORT}`);
+  });
+} catch (error) {
+  console.error(`No se pudo iniciar el servidor: ${error.message}`);
+  process.exit(1);
+}

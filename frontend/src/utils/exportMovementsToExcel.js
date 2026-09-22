@@ -1,10 +1,29 @@
 import * as XLSX from 'xlsx'
 
-const exportMovementsToExcel = (movements) => {
+const formatExportDate = (value) => {
+  if (!value) return ''
+
+  const dateText =
+    typeof value === 'string'
+      ? value.slice(0, 10)
+      : value.toISOString().slice(0, 10)
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateText)) {
+    return ''
+  }
+
+  return new Intl.DateTimeFormat('es-PE', {
+    timeZone: 'UTC',
+  }).format(new Date(`${dateText}T00:00:00Z`))
+}
+
+const exportMovementsToExcel = (movements = [], selectedMonth = '') => {
+  if (!Array.isArray(movements) || movements.length === 0) {
+    return
+  }
+
   const rows = movements.map((movement) => ({
-    Fecha: movement.date
-      ? new Intl.DateTimeFormat('es-PE').format(new Date(movement.date))
-      : '',
+    Fecha: formatExportDate(movement.date),
     Tipo: movement.type === 'INCOME' ? 'Ingreso' : 'Gasto',
     Descripción: movement.description || 'Sin descripción',
     Categoría: movement.category?.name || 'Sin categoría',
@@ -28,7 +47,7 @@ const exportMovementsToExcel = (movements) => {
 
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Movimientos')
 
-  const date = new Date().toISOString().slice(0, 10)
+  const date = selectedMonth || new Date().toISOString().slice(0, 10)
 
   XLSX.writeFile(workbook, `controla-plus-${date}.xlsx`)
 }
