@@ -8,6 +8,8 @@ import MovementForm from './components/movements/MovementForm'
 import MonthFilter from './components/dashboard/MonthFilter'
 import CategorySummary from './components/dashboard/CategorySummary'
 import ExpenseChart from './components/dashboard/ExpenseChart'
+import MonthlyChart from './components/dashboard/MonthlyChart'
+
 
 import formatMoney from './utils/formatMoney'
 import { USER_ID } from './services/api'
@@ -109,6 +111,42 @@ useEffect(() => {
       }))
       .sort((first, second) => second.amount - first.amount)
   }, [filteredMovements])
+
+const monthlyTotals = useMemo(() => {
+  const totalsByMonth = movements.reduce((accumulator, movement) => {
+    const month = movement.date?.slice(0, 7)
+
+    if (!month) return accumulator
+
+    if (!accumulator[month]) {
+      accumulator[month] = {
+        month,
+        income: 0,
+        expenses: 0,
+      }
+    }
+
+    const amount = Number(movement.amount)
+
+    if (movement.type === 'INCOME') {
+      accumulator[month].income += amount
+    } else {
+      accumulator[month].expenses += amount
+    }
+
+    return accumulator
+  }, {})
+
+  return Object.values(totalsByMonth)
+    .sort((first, second) => first.month.localeCompare(second.month))
+    .map((item) => ({
+      ...item,
+      label: new Intl.DateTimeFormat('es-PE', {
+        month: 'short',
+        year: 'numeric',
+      }).format(new Date(`${item.month}-01T00:00:00`)),
+    }))
+}, [movements])
 
 
   const totals = useMemo(() => {
@@ -312,6 +350,11 @@ useEffect(() => {
       />
       <ExpenseChart
         categories={categoryTotals}
+        formatMoney={formatMoney}
+      />
+
+      <MonthlyChart
+        data={monthlyTotals}
         formatMoney={formatMoney}
       />
 

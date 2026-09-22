@@ -1,82 +1,89 @@
-.movements-section {
+.form-section {
+  margin-bottom: 32px;
   padding: 28px;
+  border: 1px solid #e5eaf2;
   border-radius: 16px;
-  background: white;
+  background: #ffffff;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
 }
 
-.section-title {
-  margin-bottom: 20px;
+.form-section h2 {
+  margin-bottom: 24px;
+  color: #172033;
+  font-size: 1.5rem;
 }
 
-.section-title h2 {
-  margin-bottom: 6px;
-}
-
-.section-title p {
-  color: #64748b;
-}
-
-.movement-list {
+.form-section form {
   display: grid;
-  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
 }
 
-.movement-item {
+.form-section label {
+  display: grid;
+  gap: 8px;
+  color: #475569;
+  font-weight: 600;
+}
+
+.form-section input,
+.form-section select {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  color: #172033;
+  background: #ffffff;
+  font: inherit;
+}
+
+.form-section input:focus,
+.form-section select:focus {
+  outline: 2px solid #bfdbfe;
+  border-color: #2563eb;
+}
+
+.form-actions {
   display: flex;
+  grid-column: 1 / -1;
   align-items: center;
-  justify-content: space-between;
-  padding: 16px;
-  border: 1px solid #e5eaf2;
-  border-radius: 12px;
+  gap: 12px;
+  margin-top: 4px;
 }
 
-.movement-item div {
-  display: grid;
-  gap: 5px;
-}
-
-.movement-item span {
-  color: #64748b;
-  font-size: 0.9rem;
-}
-
-.movement-actions {
-  display: flex !important;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px !important;
-}
-
-.income {
-  color: #059669;
-}
-
-.expense {
-  color: #dc2626;
-}
-
-.edit-button,
-.delete-button {
-  border: none;
-  background: transparent;
-  padding: 0;
+.secondary-button {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 13px 18px;
+  color: #475569;
+  background: #ffffff;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 0.85rem;
 }
 
-.edit-button {
+.secondary-button:hover {
+  background: #f1f5f9;
+}
+
+.form-message {
+  grid-column: 1 / -1;
+  margin: 0;
   color: #2563eb;
+  font-weight: 600;
 }
 
-.edit-button:hover {
-  text-decoration: underline;
-}
+@media (max-width: 700px) {
+  .form-section {
+    padding: 20px;
+  }
 
-.delete-button {
-  color: #dc2626;
-}
+  .form-section form {
+    grid-template-columns: 1fr;
+  }
 
-.delete-button:hover {
-  text-decoration: underline;
+  .form-actions {
+    grid-column: auto;
+    flex-wrap: wrap;
+  }
 }
