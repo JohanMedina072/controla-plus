@@ -143,3 +143,37 @@
 .monthly-chart h2 {
   margin-bottom: 12px;
 }
+.dashboard-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 24px;
+}
+
+.export-button {
+  border: none;
+  border-radius: 10px;
+  padding: 12px 18px;
+  color: #ffffff;
+  background: #059669;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.export-button:hover {
+  background: #047857;
+}
+
+.export-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 700px) {
+  .dashboard-actions {
+    justify-content: stretch;
+  }
+
+  .export-button {
+    width: 100%;
+  }
+}

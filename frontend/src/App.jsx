@@ -9,7 +9,7 @@ import MonthFilter from './components/dashboard/MonthFilter'
 import CategorySummary from './components/dashboard/CategorySummary'
 import ExpenseChart from './components/dashboard/ExpenseChart'
 import MonthlyChart from './components/dashboard/MonthlyChart'
-
+import exportMovementsToExcel from './utils/exportMovementsToExcel'
 
 import formatMoney from './utils/formatMoney'
 import { USER_ID } from './services/api'
@@ -357,6 +357,17 @@ const monthlyTotals = useMemo(() => {
         data={monthlyTotals}
         formatMoney={formatMoney}
       />
+
+      <div className="dashboard-actions">
+        <button
+          type="button"
+          className="export-button"
+          onClick={() => exportMovementsToExcel(filteredMovements)}
+          disabled={filteredMovements.length === 0}
+        >
+          Exportar a Excel
+        </button>
+      </div>
 
       <section className="movements-section">
         <div className="section-title">
