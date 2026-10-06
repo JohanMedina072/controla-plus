@@ -1,3 +1,5 @@
+import VoiceMovementButton from './VoiceMovementButton'
+
 function QuickMovementForm({
   formData,
   categories,
@@ -9,6 +11,7 @@ function QuickMovementForm({
   saving,
   error,
   message,
+  onVoiceTranscript,
 }) {
   const activeAccounts = accounts.filter((account) => account.isActive)
   const availableCategories = categories.filter(
@@ -24,13 +27,16 @@ function QuickMovementForm({
           <p>Guarda un gasto o ingreso con los datos esenciales.</p>
         </div>
 
-        <button
-          type="button"
-          className="secondary-button"
-          onClick={onOpenDetailed}
-        >
-          Registro detallado
-        </button>
+        <div className="quick-entry-header-actions">
+          <VoiceMovementButton onTranscript={onVoiceTranscript} />
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={onOpenDetailed}
+          >
+            Registro detallado
+          </button>
+        </div>
       </div>
 
       <form className="quick-entry-form" onSubmit={onSubmit}>

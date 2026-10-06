@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 
 import AuthPage from './components/auth/AuthPage'
+import ProfileForm from './components/auth/ProfileForm'
 import Header from './components/layout/Header'
 import AccountList from './components/accounts/AccountList'
 import AccountForm from './components/accounts/AccountForm'
 import QuickMovementForm from './components/movements/QuickMovementForm'
+import VoiceMovementReview from './components/movements/VoiceMovementReview'
 import ReminderList from './components/reminders/ReminderList'
 import ReminderForm from './components/reminders/ReminderForm'
 import SummaryCards from './components/dashboard/SummaryCards'
@@ -21,6 +23,7 @@ import validateMovement from './utils/validateMovement'
 import validateAccount from './utils/validateAccount'
 import validateReminder from './utils/validateReminder'
 import { getSpendingInsights } from './utils/spendingInsights'
+import parseVoiceMovement from './utils/parseVoiceMovement'
 
 import formatMoney from './utils/formatMoney'
 
@@ -99,6 +102,12 @@ function App() {
   const [quickSaving, setQuickSaving] = useState(false)
   const [quickError, setQuickError] = useState('')
   const [quickMessage, setQuickMessage] = useState('')
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [profileMessage, setProfileMessage] = useState('')
+  const [voiceDraft, setVoiceDraft] = useState(null)
+  const [voiceSaving, setVoiceSaving] = useState(false)
+  const [voiceError, setVoiceError] = useState('')
+  const voiceReviewRef = useRef(null)
 
   useEffect(() => {
     const handleAuthExpired = () => setAuth(null)
@@ -168,6 +177,15 @@ function App() {
 
     loadData()
   }, [auth])
+
+  useEffect(() => {
+    if (!voiceDraft) return
+
+    voiceReviewRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    })
+  }, [voiceDraft])
 
   const filteredMovements = useMemo(() => {
     if (!selectedMonth) {
@@ -732,6 +750,85 @@ const monthlyTotals = useMemo(() => {
     setAuth(null)
   }
 
+  const handleProfileOpen = () => {
+    setProfileMessage('')
+    setIsProfileOpen(true)
+  }
+
+  const handleProfileCancel = () => {
+    setProfileMessage('')
+    setIsProfileOpen(false)
+  }
+
+  const handleProfileUpdated = (updatedUser) => {
+    const updatedAuth = {
+      ...auth,
+      user: updatedUser,
+    }
+
+    saveStoredAuth(updatedAuth)
+    setAuth(updatedAuth)
+    setIsProfileOpen(false)
+    setProfileMessage('Perfil actualizado correctamente.')
+  }
+
+  const handleVoiceTranscript = (transcript) => {
+    const parsedMovement = parseVoiceMovement(transcript, {
+      categories,
+      paymentMethods,
+      accounts,
+    })
+
+    setVoiceDraft({
+      transcript,
+      ...parsedMovement,
+    })
+    setVoiceError('')
+  }
+
+  const handleVoiceCancel = () => {
+    setVoiceDraft(null)
+    setVoiceError('')
+  }
+
+  const handleVoiceSubmit = async (formData) => {
+    setVoiceError('')
+
+    const validationMessage = validateMovement(formData)
+
+    if (validationMessage) {
+      setVoiceError(validationMessage)
+      return
+    }
+
+    try {
+      setVoiceSaving(true)
+
+      const result = await saveMovement({
+        movementId: null,
+        data: {
+          type: formData.type,
+          amount: Number(formData.amount),
+          description: formData.description.trim(),
+          categoryId: formData.categoryId,
+          paymentMethodId: formData.paymentMethodId,
+          accountId: formData.accountId,
+        },
+      })
+
+      setMovements((current) => [result, ...current])
+      await refreshAccounts()
+      setVoiceDraft(null)
+      setMessage('Movimiento registrado por voz correctamente.')
+    } catch (submitError) {
+      setVoiceError(
+        submitError.message || 'No se pudo guardar el movimiento por voz.',
+      )
+    } finally {
+      setVoiceSaving(false)
+    }
+  }
+
   if (!auth) {
     return <AuthPage onAuthenticated={handleAuthenticated} />
   }
@@ -741,8 +838,19 @@ const monthlyTotals = useMemo(() => {
       <Header
         user={auth.user}
         onToggleForm={handleNewMovement}
+        onToggleProfile={handleProfileOpen}
         onLogout={handleLogout}
       />
+      {isProfileOpen && (
+        <ProfileForm
+          user={auth.user}
+          onCancel={handleProfileCancel}
+          onUpdated={handleProfileUpdated}
+        />
+      )}
+      {!isProfileOpen && profileMessage && (
+        <p className="form-message">{profileMessage}</p>
+      )}
       <QuickMovementForm
         formData={quickFormData}
         categories={categories}
@@ -754,7 +862,23 @@ const monthlyTotals = useMemo(() => {
         saving={quickSaving}
         error={quickError}
         message={quickMessage}
+        onVoiceTranscript={handleVoiceTranscript}
       />
+      {voiceDraft && (
+        <div ref={voiceReviewRef} className="voice-review-anchor">
+          <VoiceMovementReview
+            key={voiceDraft.transcript}
+            draft={voiceDraft}
+            categories={categories}
+            paymentMethods={paymentMethods}
+            accounts={accounts}
+            onSubmit={handleVoiceSubmit}
+            onCancel={handleVoiceCancel}
+            saving={voiceSaving}
+            error={voiceError}
+          />
+        </div>
+      )}
       <AccountList
         accounts={accounts}
         loading={accountsLoading}
