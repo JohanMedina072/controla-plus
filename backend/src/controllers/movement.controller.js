@@ -1,5 +1,4 @@
 const movementService = require("../services/movement.service");
-const { getDefaultUserId } = require("../config/app");
 const {
   validateMovementId,
   validateMovementPayload,
@@ -7,7 +6,7 @@ const {
 
 const listMovements = async (req, res, next) => {
   try {
-    const movements = await movementService.getAllMovements(getDefaultUserId());
+    const movements = await movementService.getAllMovements(req.user.id);
 
     res.json({
       ok: true,
@@ -52,7 +51,7 @@ const createMovement = async (req, res, next) => {
       amount,
       description: description?.trim(),
       date,
-      userId: getDefaultUserId(),
+      userId: req.user.id,
       categoryId,
       paymentMethodId,
       accountId,
@@ -81,7 +80,7 @@ const deleteMovement = async (req, res, next) => {
       });
     }
 
-    await movementService.deleteMovement(id, getDefaultUserId());
+    await movementService.deleteMovement(id, req.user.id);
 
     res.json({
       ok: true,
@@ -131,7 +130,7 @@ const updateMovement = async (req, res, next) => {
       });
     }
 
-    const movement = await movementService.updateMovement(id, getDefaultUserId(), {
+    const movement = await movementService.updateMovement(id, req.user.id, {
       type,
       amount,
       description: description?.trim(),

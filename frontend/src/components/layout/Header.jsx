@@ -1,4 +1,6 @@
-function Header({ onToggleForm }) {
+function Header({ user, onToggleForm, onLogout }) {
+  const displayName = user?.name || user?.email || 'usuario'
+
   return (
     <header className="header">
       <div>
@@ -6,16 +8,25 @@ function Header({ onToggleForm }) {
 
         <h1>Controla+</h1>
 
-        <p>Hola, Johan. Aquí tienes un resumen de tus movimientos.</p>
+        <p>Hola, {displayName}. Aquí tienes un resumen de tus movimientos.</p>
       </div>
 
-      <button
-        type="button"
-        className="primary-button"
-        onClick={onToggleForm}
-      >
-        + Nuevo movimiento
-      </button>
+      <div className="header-actions">
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={onLogout}
+        >
+          Cerrar sesión
+        </button>
+        <button
+          type="button"
+          className="primary-button"
+          onClick={onToggleForm}
+        >
+          + Nuevo movimiento
+        </button>
+      </div>
     </header>
   )
 }

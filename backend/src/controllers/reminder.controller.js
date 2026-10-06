@@ -1,5 +1,4 @@
 const reminderService = require("../services/reminder.service");
-const { getDefaultUserId } = require("../config/app");
 const {
   validateReminderId,
   validateReminderPayload,
@@ -7,7 +6,7 @@ const {
 
 const listReminders = async (req, res, next) => {
   try {
-    const reminders = await reminderService.getAllReminders(getDefaultUserId());
+    const reminders = await reminderService.getAllReminders(req.user.id);
 
     res.json({
       ok: true,
@@ -36,7 +35,7 @@ const createReminder = async (req, res, next) => {
     }
 
     const reminder = await reminderService.createReminder({
-      userId: getDefaultUserId(),
+      userId: req.user.id,
       type,
       name,
       nextDueDate,
@@ -82,7 +81,7 @@ const updateReminder = async (req, res, next) => {
 
     const reminder = await reminderService.updateReminder(
       id,
-      getDefaultUserId(),
+      req.user.id,
       { type, name, nextDueDate, amount },
     );
 
@@ -108,7 +107,7 @@ const removeReminder = async (req, res, next) => {
       });
     }
 
-    await reminderService.deleteReminder(id, getDefaultUserId());
+    await reminderService.deleteReminder(id, req.user.id);
 
     res.json({
       ok: true,
@@ -133,7 +132,7 @@ const completeReminder = async (req, res, next) => {
 
     const reminder = await reminderService.completeReminder(
       id,
-      getDefaultUserId(),
+      req.user.id,
     );
 
     res.json({

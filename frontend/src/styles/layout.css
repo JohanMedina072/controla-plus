@@ -14,6 +14,13 @@
   margin-bottom: 36px;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .eyebrow {
   margin: 0 0 8px;
   color: #2563eb;
@@ -62,6 +69,12 @@ h1 {
   .header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 
   h1 {

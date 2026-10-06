@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 
+import AuthPage from './components/auth/AuthPage'
 import Header from './components/layout/Header'
 import AccountList from './components/accounts/AccountList'
 import AccountForm from './components/accounts/AccountForm'
@@ -37,8 +38,14 @@ import {
   saveReminder,
 } from './services/reminder.service'
 import { REMINDER_NAMES } from './utils/reminderOptions'
+import {
+  clearStoredAuth,
+  getStoredAuth,
+  saveStoredAuth,
+} from './utils/authStorage'
 
 function App() {
+  const [auth, setAuth] = useState(() => getStoredAuth())
   const [movements, setMovements] = useState([])
   const [categories, setCategories] = useState([])
   const [paymentMethods, setPaymentMethods] = useState([])
@@ -93,55 +100,74 @@ function App() {
   const [quickError, setQuickError] = useState('')
   const [quickMessage, setQuickMessage] = useState('')
 
-useEffect(() => {
-  const loadData = async () => {
-    try {
-      const [
-        movementsResult,
-        catalogResult,
-        accountsResult,
-        remindersResult,
-      ] = await Promise.all([
-        getMovements(),
-        getCatalog(),
-        getAccounts(),
-        getReminders(),
-      ])
+  useEffect(() => {
+    const handleAuthExpired = () => setAuth(null)
 
-      setMovements(movementsResult)
-      setCategories(catalogResult.categories)
-      setPaymentMethods(catalogResult.paymentMethods)
-      setAccounts(accountsResult)
-      setReminders(remindersResult)
+    window.addEventListener('controla:auth-expired', handleAuthExpired)
 
-      const firstExpenseCategory = catalogResult.categories.find(
-        (category) => category.type === 'EXPENSE',
-      )
-
-      setFormData((current) => ({
-        ...current,
-        categoryId: firstExpenseCategory?.id || '',
-        paymentMethodId: catalogResult.paymentMethods[0]?.id || '',
-      }))
-
-      setQuickFormData((current) => ({
-        ...current,
-        categoryId: firstExpenseCategory?.id || '',
-        paymentMethodId: catalogResult.paymentMethods[0]?.id || '',
-      }))
-    } catch (error) {
-      setError(error.message)
-      setAccountError(error.message)
-      setReminderError(error.message)
-    } finally {
-      setLoading(false)
-      setAccountsLoading(false)
-      setRemindersLoading(false)
+    return () => {
+      window.removeEventListener('controla:auth-expired', handleAuthExpired)
     }
-  }
+  }, [])
 
-  loadData()
-}, [])
+  useEffect(() => {
+    if (!auth) return
+
+    const loadData = async () => {
+      try {
+        setLoading(true)
+        setAccountsLoading(true)
+        setRemindersLoading(true)
+        setError('')
+        setAccountError('')
+        setReminderError('')
+
+        const [
+          movementsResult,
+          catalogResult,
+          accountsResult,
+          remindersResult,
+        ] = await Promise.all([
+          getMovements(),
+          getCatalog(),
+          getAccounts(),
+          getReminders(),
+        ])
+
+        setMovements(movementsResult)
+        setCategories(catalogResult.categories)
+        setPaymentMethods(catalogResult.paymentMethods)
+        setAccounts(accountsResult)
+        setReminders(remindersResult)
+
+        const firstExpenseCategory = catalogResult.categories.find(
+          (category) => category.type === 'EXPENSE',
+        )
+
+        setFormData((current) => ({
+          ...current,
+          categoryId: firstExpenseCategory?.id || '',
+          paymentMethodId: catalogResult.paymentMethods[0]?.id || '',
+        }))
+
+        setQuickFormData((current) => ({
+          ...current,
+          categoryId: firstExpenseCategory?.id || '',
+          paymentMethodId: catalogResult.paymentMethods[0]?.id || '',
+        }))
+      } catch (error) {
+        setError(error.message)
+        setAccountError(error.message)
+        setReminderError(error.message)
+      } finally {
+        setLoading(false)
+        setAccountsLoading(false)
+        setRemindersLoading(false)
+      }
+    }
+
+    loadData()
+  }, [auth])
 
   const filteredMovements = useMemo(() => {
     if (!selectedMonth) {
@@ -696,9 +722,27 @@ const monthlyTotals = useMemo(() => {
     }
   }
 
+  const handleAuthenticated = (session) => {
+    saveStoredAuth(session)
+    setAuth(session)
+  }
+
+  const handleLogout = () => {
+    clearStoredAuth()
+    setAuth(null)
+  }
+
+  if (!auth) {
+    return <AuthPage onAuthenticated={handleAuthenticated} />
+  }
+
   return (
     <main className="app">
-      <Header onToggleForm={handleNewMovement} />
+      <Header
+        user={auth.user}
+        onToggleForm={handleNewMovement}
+        onLogout={handleLogout}
+      />
       <QuickMovementForm
         formData={quickFormData}
         categories={categories}

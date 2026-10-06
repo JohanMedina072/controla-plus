@@ -1,31 +1,31 @@
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const getJwtSecret = () => {
+  const secret = process.env.JWT_SECRET?.trim();
 
-const getDefaultUserId = () => {
-  const userId = process.env.DEFAULT_USER_ID?.trim();
-
-  if (!userId) {
+  if (!secret) {
     const error = new Error(
-      "DEFAULT_USER_ID no está configurado en el archivo .env del backend",
+      "JWT_SECRET no está configurado en el archivo .env del backend",
     );
     error.statusCode = 500;
     throw error;
   }
 
-  if (!UUID_PATTERN.test(userId)) {
-    const error = new Error("DEFAULT_USER_ID no tiene un UUID válido");
+  if (secret.length < 32) {
+    const error = new Error("JWT_SECRET debe tener al menos 32 caracteres");
     error.statusCode = 500;
     throw error;
   }
 
-  return userId;
+  return secret;
 };
 
+const getJwtExpiresIn = () => process.env.JWT_EXPIRES_IN?.trim() || "7d";
+
 const assertAppConfig = () => {
-  getDefaultUserId();
+  getJwtSecret();
 };
 
 module.exports = {
-  getDefaultUserId,
+  getJwtSecret,
+  getJwtExpiresIn,
   assertAppConfig,
 };

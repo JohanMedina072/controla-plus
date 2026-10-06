@@ -1,3 +1,5 @@
+import { clearStoredAuth, getStoredToken } from '../utils/authStorage'
+
 export class ApiError extends Error {
   constructor(message, status = 0) {
     super(message)
@@ -12,9 +14,18 @@ export const requestJson = async (
   fallbackMessage = 'No se pudo completar la solicitud',
 ) => {
   let response
+  const headers = new Headers(options.headers || {})
+  const token = getStoredToken()
+
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
 
   try {
-    response = await fetch(url, options)
+    response = await fetch(url, {
+      ...options,
+      headers,
+    })
   } catch {
     throw new ApiError(
       'No se pudo conectar con el servidor. Verifica que el backend esté ejecutándose.',
@@ -40,6 +51,14 @@ export const requestJson = async (
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      clearStoredAuth()
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('controla:auth-expired'))
+      }
+    }
+
     throw new ApiError(
       result?.message || fallbackMessage,
       response.status,

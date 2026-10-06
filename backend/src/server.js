@@ -4,10 +4,12 @@ require("dotenv").config();
 
 const healthRoutes = require("./routes/health.routes");
 const databaseRoutes = require("./routes/database.routes");
+const authRoutes = require("./routes/auth.routes");
 const movementRoutes = require("./routes/movement.routes");
 const catalogRoutes = require("./routes/catalog.routes");
 const accountRoutes = require("./routes/account.routes");
 const reminderRoutes = require("./routes/reminder.routes");
+const { requireAuth } = require("./middlewares/auth.middleware");
 const { assertAppConfig } = require("./config/app");
 const {
   notFoundHandler,
@@ -24,10 +26,11 @@ app.use(express.json());
 // Rutas
 app.use("/api/health", healthRoutes);
 app.use("/api/db-test", databaseRoutes);
-app.use("/api/movements", movementRoutes);
-app.use("/api/catalog", catalogRoutes);
-app.use("/api/accounts", accountRoutes);
-app.use("/api/reminders", reminderRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/movements", requireAuth, movementRoutes);
+app.use("/api/catalog", requireAuth, catalogRoutes);
+app.use("/api/accounts", requireAuth, accountRoutes);
+app.use("/api/reminders", requireAuth, reminderRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

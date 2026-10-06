@@ -9,3 +9,5 @@ export const CATALOG_URL = `${API_BASE_URL}/catalog`
 export const ACCOUNTS_URL = `${API_BASE_URL}/accounts`
 
 export const REMINDERS_URL = `${API_BASE_URL}/reminders`
+
+export const AUTH_URL = `${API_BASE_URL}/auth`

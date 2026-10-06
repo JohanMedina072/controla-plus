@@ -1,12 +1,11 @@
 const express = require('express')
 const prisma = require('../config/prisma')
-const { getDefaultUserId } = require('../config/app')
 
 const router = express.Router()
 
 router.get('/', async (req, res, next) => {
   try {
-    const userId = getDefaultUserId()
+    const userId = req.user.id
 
     const [categories, paymentMethods] = await Promise.all([
       prisma.category.findMany({

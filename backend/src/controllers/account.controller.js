@@ -1,10 +1,9 @@
 const accountService = require("../services/account.service");
-const { getDefaultUserId } = require("../config/app");
 const { validateAccountPayload } = require("../validators/account.validator");
 
 const listAccounts = async (req, res, next) => {
   try {
-    const accounts = await accountService.getAllAccounts(getDefaultUserId());
+    const accounts = await accountService.getAllAccounts(req.user.id);
 
     res.json({
       ok: true,
@@ -31,7 +30,7 @@ const createAccount = async (req, res, next) => {
     }
 
     const account = await accountService.createAccount({
-      userId: getDefaultUserId(),
+      userId: req.user.id,
       name,
       initialBalance,
     });
