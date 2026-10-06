@@ -79,6 +79,11 @@ const ensureDefaultCatalog = async (database, userId) => {
 const isBcryptHash = (value) =>
   typeof value === "string" && /^\$2[aby]\$\d{2}\$/.test(value);
 
+const comparePassword = async (password, passwordHash) =>
+  isBcryptHash(passwordHash)
+    ? bcrypt.compare(password, passwordHash)
+    : password === passwordHash;
+
 const register = async ({ name, email, password }) => {
   const normalizedEmail = normalizeEmail(email);
   const existingUser = await prisma.user.findUnique({
@@ -126,9 +131,7 @@ const login = async ({ email, password }) => {
     );
   }
 
-  const passwordMatches = isBcryptHash(user.passwordHash)
-    ? await bcrypt.compare(password, user.passwordHash)
-    : password === user.passwordHash;
+  const passwordMatches = await comparePassword(password, user.passwordHash);
 
   if (!passwordMatches) {
     throw new AppError(
@@ -154,6 +157,92 @@ const login = async ({ email, password }) => {
   return createSession(user);
 };
 
+const updateProfile = async (
+  userId,
+  { name, email, currentPassword, newPassword },
+) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new AppError("La sesión ya no es válida", 401, "INVALID_SESSION");
+  }
+
+  const passwordMatches = await comparePassword(
+    currentPassword,
+    user.passwordHash,
+  );
+
+  if (!passwordMatches) {
+    throw new AppError(
+      "La contraseña actual es incorrecta",
+      400,
+      "INVALID_CURRENT_PASSWORD",
+    );
+  }
+
+  const normalizedEmail = normalizeEmail(email);
+  const nameChanged = name.trim() !== user.name;
+  const emailChanged = normalizedEmail !== user.email;
+  const passwordChanged = Boolean(newPassword);
+
+  if (!nameChanged && !emailChanged && !passwordChanged) {
+    throw new AppError(
+      "No hay cambios para guardar",
+      400,
+      "NO_PROFILE_CHANGES",
+    );
+  }
+
+  if (emailChanged) {
+    const emailOwner = await prisma.user.findFirst({
+      where: {
+        email: normalizedEmail,
+        id: { not: userId },
+      },
+      select: { id: true },
+    });
+
+    if (emailOwner) {
+      throw new AppError(
+        "Ya existe una cuenta con ese correo",
+        409,
+        "EMAIL_ALREADY_REGISTERED",
+      );
+    }
+  }
+
+  const data = {
+    name: name.trim(),
+    email: normalizedEmail,
+  };
+
+  if (passwordChanged) {
+    if (newPassword === currentPassword) {
+      throw new AppError(
+        "La nueva contraseña debe ser diferente a la actual",
+        400,
+        "PASSWORD_UNCHANGED",
+      );
+    }
+
+    data.passwordHash = await bcrypt.hash(newPassword, PASSWORD_SALT_ROUNDS);
+  } else if (!isBcryptHash(user.passwordHash)) {
+    data.passwordHash = await bcrypt.hash(
+      currentPassword,
+      PASSWORD_SALT_ROUNDS,
+    );
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data,
+  });
+
+  return toPublicUser(updatedUser);
+};
+
 const getPublicUser = async (userId) => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -169,5 +258,6 @@ const getPublicUser = async (userId) => {
 module.exports = {
   register,
   login,
+  updateProfile,
   getPublicUser,
 };

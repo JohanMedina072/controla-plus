@@ -24,3 +24,17 @@ export const register = async (data) => {
     'No se pudo crear la cuenta',
   )
 }
+
+export const updateProfile = async (data) => {
+  return requestJson(
+    `${AUTH_URL}/profile`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    },
+    'No se pudo actualizar el perfil',
+  )
+}

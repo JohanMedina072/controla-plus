@@ -1,4 +1,4 @@
-function Header({ user, onToggleForm, onLogout }) {
+function Header({ user, onToggleForm, onToggleProfile, onLogout }) {
   const displayName = user?.name || user?.email || 'usuario'
 
   return (
@@ -12,6 +12,13 @@ function Header({ user, onToggleForm, onLogout }) {
       </div>
 
       <div className="header-actions">
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={onToggleProfile}
+        >
+          Mi perfil
+        </button>
         <button
           type="button"
           className="secondary-button"

@@ -1,6 +1,7 @@
 const authService = require("../services/auth.service");
 const {
   validateLoginPayload,
+  validateProfilePayload,
   validateRegisterPayload,
 } = require("../validators/auth.validator");
 
@@ -69,8 +70,43 @@ const me = async (req, res, next) => {
   }
 };
 
+const updateProfile = async (req, res, next) => {
+  try {
+    const { name, email, currentPassword, newPassword } = req.body;
+    const validationMessage = validateProfilePayload({
+      name,
+      email,
+      currentPassword,
+      newPassword,
+    });
+
+    if (validationMessage) {
+      return res.status(400).json({
+        ok: false,
+        message: validationMessage,
+      });
+    }
+
+    const user = await authService.updateProfile(req.user.id, {
+      name,
+      email,
+      currentPassword,
+      newPassword,
+    });
+
+    return res.json({
+      ok: true,
+      message: "Perfil actualizado correctamente",
+      data: user,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
   me,
+  updateProfile,
 };

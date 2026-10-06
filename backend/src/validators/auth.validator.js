@@ -52,7 +52,49 @@ const validateLoginPayload = (payload = {}) => {
   return null;
 };
 
+const validateProfilePayload = (payload = {}) => {
+  const { name, email, currentPassword, newPassword } = payload;
+
+  if (typeof name !== "string" || !name.trim()) {
+    return "El nombre es obligatorio";
+  }
+
+  if (name.trim().length > MAX_NAME_LENGTH) {
+    return `El nombre no puede superar ${MAX_NAME_LENGTH} caracteres`;
+  }
+
+  if (typeof email !== "string" || !email.trim()) {
+    return "El correo es obligatorio";
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  if (
+    normalizedEmail.length > MAX_EMAIL_LENGTH ||
+    !EMAIL_PATTERN.test(normalizedEmail)
+  ) {
+    return "El correo no tiene un formato válido";
+  }
+
+  if (typeof currentPassword !== "string" || !currentPassword) {
+    return "Debes escribir tu contraseña actual para guardar cambios";
+  }
+
+  if (newPassword !== undefined && newPassword !== "") {
+    if (typeof newPassword !== "string" || newPassword.length < MIN_PASSWORD_LENGTH) {
+      return `La nueva contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres`;
+    }
+
+    if (newPassword.length > 128) {
+      return "La nueva contraseña no puede superar 128 caracteres";
+    }
+  }
+
+  return null;
+};
+
 module.exports = {
   validateRegisterPayload,
   validateLoginPayload,
+  validateProfilePayload,
 };
