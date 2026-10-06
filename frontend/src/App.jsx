@@ -4,9 +4,11 @@ import './App.css'
 import Header from './components/layout/Header'
 import AccountList from './components/accounts/AccountList'
 import AccountForm from './components/accounts/AccountForm'
+import QuickMovementForm from './components/movements/QuickMovementForm'
 import ReminderList from './components/reminders/ReminderList'
 import ReminderForm from './components/reminders/ReminderForm'
 import SummaryCards from './components/dashboard/SummaryCards'
+import InsightsPanel from './components/dashboard/InsightsPanel'
 import MovementList from './components/movements/MovementList'
 import MovementForm from './components/movements/MovementForm'
 import MonthFilter from './components/dashboard/MonthFilter'
@@ -17,6 +19,7 @@ import exportMovementsToExcel from './utils/exportMovementsToExcel'
 import validateMovement from './utils/validateMovement'
 import validateAccount from './utils/validateAccount'
 import validateReminder from './utils/validateReminder'
+import { getSpendingInsights } from './utils/spendingInsights'
 
 import formatMoney from './utils/formatMoney'
 
@@ -78,6 +81,17 @@ function App() {
     paymentMethodId: '',
     accountId: '',
   })
+  const [quickFormData, setQuickFormData] = useState({
+    type: 'EXPENSE',
+    amount: '',
+    description: '',
+    categoryId: '',
+    paymentMethodId: '',
+    accountId: '',
+  })
+  const [quickSaving, setQuickSaving] = useState(false)
+  const [quickError, setQuickError] = useState('')
+  const [quickMessage, setQuickMessage] = useState('')
 
 useEffect(() => {
   const loadData = async () => {
@@ -105,6 +119,12 @@ useEffect(() => {
       )
 
       setFormData((current) => ({
+        ...current,
+        categoryId: firstExpenseCategory?.id || '',
+        paymentMethodId: catalogResult.paymentMethods[0]?.id || '',
+      }))
+
+      setQuickFormData((current) => ({
         ...current,
         categoryId: firstExpenseCategory?.id || '',
         paymentMethodId: catalogResult.paymentMethods[0]?.id || '',
@@ -217,6 +237,11 @@ const monthlyTotals = useMemo(() => {
   }, [filteredMovements])
 
   const balance = totals.income - totals.expenses
+
+  const spendingInsights = useMemo(
+    () => getSpendingInsights(movements, selectedMonth),
+    [movements, selectedMonth],
+  )
 
   const resetForm = () => {
     setFormData({
@@ -463,6 +488,41 @@ const monthlyTotals = useMemo(() => {
     setIsFormOpen(true)
   }
 
+  const resetQuickForm = () => {
+    setQuickFormData({
+      type: 'EXPENSE',
+      amount: '',
+      description: '',
+      categoryId:
+        categories.find((category) => category.type === 'EXPENSE')?.id || '',
+      paymentMethodId: paymentMethods[0]?.id || '',
+      accountId: '',
+    })
+  }
+
+  const handleQuickChange = (event) => {
+    const { name, value } = event.target
+
+    setQuickFormData((current) => {
+      if (name === 'type') {
+        const firstCategory = categories.find(
+          (category) => category.type === value,
+        )
+
+        return {
+          ...current,
+          type: value,
+          categoryId: firstCategory?.id || '',
+        }
+      }
+
+      return {
+        ...current,
+        [name]: value,
+      }
+    })
+  }
+
   const handleCancel = () => {
     resetForm()
     setMessage('')
@@ -570,6 +630,47 @@ const monthlyTotals = useMemo(() => {
     }
   }
 
+  const handleQuickSubmit = async (event) => {
+    event.preventDefault()
+    setQuickError('')
+    setQuickMessage('')
+
+    const validationMessage = validateMovement(quickFormData)
+
+    if (validationMessage) {
+      setQuickError(validationMessage)
+      return
+    }
+
+    try {
+      setQuickSaving(true)
+
+      const result = await saveMovement({
+        movementId: null,
+        data: {
+          type: quickFormData.type,
+          amount: Number(quickFormData.amount),
+          description: quickFormData.description.trim(),
+          categoryId: quickFormData.categoryId,
+          paymentMethodId: quickFormData.paymentMethodId,
+          accountId: quickFormData.accountId,
+        },
+      })
+
+      setMovements((current) => [result, ...current])
+      await refreshAccounts()
+      resetQuickForm()
+      setQuickMessage('Movimiento guardado correctamente.')
+    } catch (submitError) {
+      setQuickError(
+        submitError.message ||
+          'Ocurrió un error al guardar el movimiento.',
+      )
+    } finally {
+      setQuickSaving(false)
+    }
+  }
+
   const handleDelete = async (movementId) => {
     const confirmed = window.confirm(
       '¿Seguro que deseas eliminar este movimiento?',
@@ -598,6 +699,18 @@ const monthlyTotals = useMemo(() => {
   return (
     <main className="app">
       <Header onToggleForm={handleNewMovement} />
+      <QuickMovementForm
+        formData={quickFormData}
+        categories={categories}
+        paymentMethods={paymentMethods}
+        accounts={accounts}
+        onChange={handleQuickChange}
+        onSubmit={handleQuickSubmit}
+        onOpenDetailed={handleNewMovement}
+        saving={quickSaving}
+        error={quickError}
+        message={quickMessage}
+      />
       <AccountList
         accounts={accounts}
         loading={accountsLoading}
@@ -646,6 +759,10 @@ const monthlyTotals = useMemo(() => {
         value={selectedMonth}
         onChange={setSelectedMonth}
         onClear={() => setSelectedMonth('')}
+      />
+      <InsightsPanel
+        insights={spendingInsights}
+        formatMoney={formatMoney}
       />
       {isFormOpen && (
         <MovementForm

@@ -1,0 +1,119 @@
+.quick-entry-section {
+  margin-bottom: 32px;
+  padding: 28px;
+  border: 1px solid #bfdbfe;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 65%);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.quick-entry-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.quick-entry-eyebrow,
+.insights-eyebrow {
+  margin-bottom: 8px;
+  color: #2563eb;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.quick-entry-header h2 {
+  margin-bottom: 6px;
+  color: #172033;
+}
+
+.quick-entry-header p:last-child {
+  margin-bottom: 0;
+  color: #64748b;
+}
+
+.quick-entry-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.quick-entry-form label,
+.quick-entry-options label {
+  display: grid;
+  gap: 8px;
+  color: #475569;
+  font-weight: 600;
+}
+
+.quick-entry-form input,
+.quick-entry-form select {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  color: #172033;
+  background: #ffffff;
+  font: inherit;
+}
+
+.quick-entry-form input:focus,
+.quick-entry-form select:focus {
+  outline: 2px solid #bfdbfe;
+  border-color: #2563eb;
+}
+
+.quick-entry-options {
+  grid-column: 1 / -1;
+  border-top: 1px solid #dbeafe;
+  padding-top: 14px;
+}
+
+.quick-entry-options summary {
+  color: #2563eb;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.quick-entry-options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.quick-entry-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 12px;
+}
+
+@media (max-width: 850px) {
+  .quick-entry-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .quick-entry-section {
+    padding: 20px;
+  }
+
+  .quick-entry-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .quick-entry-header button,
+  .quick-entry-actions button {
+    width: 100%;
+  }
+
+  .quick-entry-form,
+  .quick-entry-options-grid {
+    grid-template-columns: 1fr;
+  }
+}
