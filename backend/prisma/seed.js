@@ -15,6 +15,21 @@ async function main() {
     },
   });
 
+  await prisma.account.upsert({
+    where: {
+      name_userId: {
+        name: "Cuenta de emergencia",
+        userId: user.id,
+      },
+    },
+    update: {},
+    create: {
+      name: "Cuenta de emergencia",
+      initialBalance: "200.00",
+      userId: user.id,
+    },
+  });
+
   const categories = [
     { name: "Comida", type: "EXPENSE" },
     { name: "Transporte", type: "EXPENSE" },

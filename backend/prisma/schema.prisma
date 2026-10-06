@@ -12,6 +12,11 @@ enum MovementType {
   EXPENSE
 }
 
+enum ReminderType {
+  CREDIT_CARD
+  CREDIT
+}
+
 model User {
   id           String   @id @default(uuid()) @db.Uuid
   name         String
@@ -22,6 +27,41 @@ model User {
   categories     Category[]
   paymentMethods PaymentMethod[]
   movements      Movement[]
+  accounts       Account[]
+  reminders      PaymentReminder[]
+}
+
+model Account {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String
+  initialBalance Decimal  @db.Decimal(10, 2)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  userId String @db.Uuid
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movements Movement[]
+
+  @@unique([name, userId])
+}
+
+model PaymentReminder {
+  id          String       @id @default(uuid()) @db.Uuid
+  type        ReminderType
+  name        String
+  dueDay      Int
+  nextDueDate DateTime     @db.Date
+  amount      Decimal?     @db.Decimal(10, 2)
+  isActive    Boolean      @default(true)
+  lastPaidAt  DateTime?
+  createdAt   DateTime     @default(now())
+
+  userId String @db.Uuid
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
 }
 
 model Category {
@@ -50,11 +90,13 @@ model Movement {
   description String?
   date        DateTime     @default(now())
 
-  userId          String @db.Uuid
-  categoryId      String @db.Uuid
-  paymentMethodId String @db.Uuid
+  userId          String  @db.Uuid
+  categoryId      String  @db.Uuid
+  paymentMethodId String  @db.Uuid
+  accountId       String? @db.Uuid
 
   user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   category      Category      @relation(fields: [categoryId], references: [id])
   paymentMethod PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+  account       Account?      @relation(fields: [accountId], references: [id], onDelete: SetNull)
 }

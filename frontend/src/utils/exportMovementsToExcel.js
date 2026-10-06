@@ -29,6 +29,7 @@ const exportMovementsToExcel = (movements = [], selectedMonth = '') => {
     Categoría: movement.category?.name || 'Sin categoría',
     'Método de pago':
       movement.paymentMethod?.name || 'Sin método de pago',
+    Cuenta: movement.account?.name || 'Sin cuenta',
     Monto: Number(movement.amount),
   }))
 
@@ -40,6 +41,7 @@ const exportMovementsToExcel = (movements = [], selectedMonth = '') => {
     { wch: 25 },
     { wch: 18 },
     { wch: 20 },
+    { wch: 24 },
     { wch: 12 },
   ]
 

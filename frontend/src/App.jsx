@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 
 import Header from './components/layout/Header'
+import AccountList from './components/accounts/AccountList'
+import AccountForm from './components/accounts/AccountForm'
+import ReminderList from './components/reminders/ReminderList'
+import ReminderForm from './components/reminders/ReminderForm'
 import SummaryCards from './components/dashboard/SummaryCards'
 import MovementList from './components/movements/MovementList'
 import MovementForm from './components/movements/MovementForm'
@@ -11,6 +15,8 @@ import ExpenseChart from './components/dashboard/ExpenseChart'
 import MonthlyChart from './components/dashboard/MonthlyChart'
 import exportMovementsToExcel from './utils/exportMovementsToExcel'
 import validateMovement from './utils/validateMovement'
+import validateAccount from './utils/validateAccount'
+import validateReminder from './utils/validateReminder'
 
 import formatMoney from './utils/formatMoney'
 
@@ -20,6 +26,14 @@ import {
   removeMovement,
   saveMovement,
 } from './services/movement.service'
+import { getAccounts, saveAccount } from './services/account.service'
+import {
+  completeReminder,
+  getReminders,
+  removeReminder,
+  saveReminder,
+} from './services/reminder.service'
+import { REMINDER_NAMES } from './utils/reminderOptions'
 
 function App() {
   const [movements, setMovements] = useState([])
@@ -32,27 +46,59 @@ function App() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [selectedMonth, setSelectedMonth] = useState('')
-  
-  
+  const [accounts, setAccounts] = useState([])
+  const [accountsLoading, setAccountsLoading] = useState(true)
+  const [accountError, setAccountError] = useState('')
+  const [accountMessage, setAccountMessage] = useState('')
+  const [isAccountFormOpen, setIsAccountFormOpen] = useState(false)
+  const [accountSaving, setAccountSaving] = useState(false)
+  const [accountFormData, setAccountFormData] = useState({
+    name: '',
+    initialBalance: '',
+  })
+  const [reminders, setReminders] = useState([])
+  const [remindersLoading, setRemindersLoading] = useState(true)
+  const [reminderError, setReminderError] = useState('')
+  const [reminderMessage, setReminderMessage] = useState('')
+  const [isReminderFormOpen, setIsReminderFormOpen] = useState(false)
+  const [editingReminderId, setEditingReminderId] = useState(null)
+  const [reminderSaving, setReminderSaving] = useState(false)
+  const [reminderFormData, setReminderFormData] = useState({
+    type: 'CREDIT_CARD',
+    name: '',
+    nextDueDate: '',
+    amount: '',
+  })
+
   const [formData, setFormData] = useState({
     type: 'EXPENSE',
     amount: '',
     description: '',
     categoryId: '',
     paymentMethodId: '',
+    accountId: '',
   })
 
 useEffect(() => {
   const loadData = async () => {
     try {
-      const [movementsResult, catalogResult] = await Promise.all([
+      const [
+        movementsResult,
+        catalogResult,
+        accountsResult,
+        remindersResult,
+      ] = await Promise.all([
         getMovements(),
         getCatalog(),
+        getAccounts(),
+        getReminders(),
       ])
 
       setMovements(movementsResult)
       setCategories(catalogResult.categories)
       setPaymentMethods(catalogResult.paymentMethods)
+      setAccounts(accountsResult)
+      setReminders(remindersResult)
 
       const firstExpenseCategory = catalogResult.categories.find(
         (category) => category.type === 'EXPENSE',
@@ -65,8 +111,12 @@ useEffect(() => {
       }))
     } catch (error) {
       setError(error.message)
+      setAccountError(error.message)
+      setReminderError(error.message)
     } finally {
       setLoading(false)
+      setAccountsLoading(false)
+      setRemindersLoading(false)
     }
   }
 
@@ -176,9 +226,234 @@ const monthlyTotals = useMemo(() => {
       categoryId:
         categories.find((category) => category.type === 'EXPENSE')?.id || '',
       paymentMethodId: paymentMethods[0]?.id || '',
+      accountId: '',
     })
 
     setEditingMovementId(null)
+  }
+
+  const resetAccountForm = () => {
+    setAccountFormData({
+      name: '',
+      initialBalance: '',
+    })
+  }
+
+  const handleNewAccount = () => {
+    resetAccountForm()
+    setAccountError('')
+    setAccountMessage('')
+    setIsAccountFormOpen(true)
+  }
+
+  const handleAccountCancel = () => {
+    resetAccountForm()
+    setAccountError('')
+    setAccountMessage('')
+    setIsAccountFormOpen(false)
+  }
+
+  const handleAccountChange = (event) => {
+    const { name, value } = event.target
+
+    setAccountFormData((current) => ({
+      ...current,
+      [name]: value,
+    }))
+  }
+
+  const handleAccountSubmit = async (event) => {
+    event.preventDefault()
+    setAccountError('')
+    setAccountMessage('')
+
+    const validationMessage = validateAccount(accountFormData)
+
+    if (validationMessage) {
+      setAccountError(validationMessage)
+      return
+    }
+
+    try {
+      setAccountSaving(true)
+
+      const account = await saveAccount({
+        name: accountFormData.name.trim(),
+        initialBalance: Number(accountFormData.initialBalance),
+      })
+
+      setAccounts((current) => [...current, account])
+      resetAccountForm()
+      setIsAccountFormOpen(false)
+      setAccountMessage('Cuenta creada correctamente.')
+    } catch (saveError) {
+      setAccountError(
+        saveError.message || 'Ocurrió un error al crear la cuenta.',
+      )
+    } finally {
+      setAccountSaving(false)
+    }
+  }
+
+  const resetReminderForm = () => {
+    setReminderFormData({
+      type: 'CREDIT_CARD',
+      name: '',
+      nextDueDate: '',
+      amount: '',
+    })
+    setEditingReminderId(null)
+  }
+
+  const handleNewReminder = () => {
+    resetReminderForm()
+    setReminderError('')
+    setReminderMessage('')
+    setIsReminderFormOpen(true)
+  }
+
+  const handleReminderCancel = () => {
+    resetReminderForm()
+    setReminderError('')
+    setReminderMessage('')
+    setIsReminderFormOpen(false)
+  }
+
+  const handleReminderChange = (event) => {
+    const { name, value } = event.target
+
+    setReminderFormData((current) => {
+      if (name === 'type') {
+        return {
+          ...current,
+          type: value,
+          name: REMINDER_NAMES[value]?.[0] || '',
+        }
+      }
+
+      return {
+        ...current,
+        [name]: value,
+      }
+    })
+  }
+
+  const handleReminderSubmit = async (event) => {
+    event.preventDefault()
+    setReminderError('')
+    setReminderMessage('')
+
+    const validationMessage = validateReminder(reminderFormData)
+
+    if (validationMessage) {
+      setReminderError(validationMessage)
+      return
+    }
+
+    try {
+      setReminderSaving(true)
+
+      const isEditing = Boolean(editingReminderId)
+      const result = await saveReminder({
+        reminderId: isEditing ? editingReminderId : null,
+        data: {
+          type: reminderFormData.type,
+          name: reminderFormData.name,
+          nextDueDate: reminderFormData.nextDueDate,
+          amount:
+            reminderFormData.amount === ''
+              ? null
+              : Number(reminderFormData.amount),
+        },
+      })
+
+      if (isEditing) {
+        setReminders((current) =>
+          current.map((reminder) =>
+            reminder.id === editingReminderId ? result : reminder,
+          ),
+        )
+      } else {
+        setReminders((current) => [...current, result])
+      }
+
+      resetReminderForm()
+      setIsReminderFormOpen(false)
+      setReminderMessage(
+        isEditing
+          ? 'Recordatorio actualizado correctamente.'
+          : 'Recordatorio guardado correctamente.',
+      )
+    } catch (saveError) {
+      setReminderError(
+        saveError.message || 'Ocurrió un error al guardar el recordatorio.',
+      )
+    } finally {
+      setReminderSaving(false)
+    }
+  }
+
+  const handleEditReminder = (reminder) => {
+    setReminderFormData({
+      type: reminder.type,
+      name: reminder.name,
+      nextDueDate: reminder.nextDueDate || '',
+      amount: reminder.amount || '',
+    })
+    setEditingReminderId(reminder.id)
+    setReminderError('')
+    setReminderMessage('')
+    setIsReminderFormOpen(true)
+  }
+
+  const handleCompleteReminder = async (reminderId) => {
+    setReminderError('')
+    setReminderMessage('')
+
+    try {
+      const result = await completeReminder(reminderId)
+
+      setReminders((current) =>
+        current.map((reminder) =>
+          reminder.id === reminderId ? result : reminder,
+        ),
+      )
+      setReminderMessage(
+        'Recordatorio marcado como pagado. No se modificó ninguna cuenta ni movimiento.',
+      )
+    } catch (completeError) {
+      setReminderError(completeError.message)
+    }
+  }
+
+  const handleDeleteReminder = async (reminderId) => {
+    const confirmed = window.confirm(
+      '¿Seguro que deseas eliminar este recordatorio?',
+    )
+
+    if (!confirmed) return
+
+    setReminderError('')
+    setReminderMessage('')
+
+    try {
+      await removeReminder(reminderId)
+      setReminders((current) =>
+        current.filter((reminder) => reminder.id !== reminderId),
+      )
+      setReminderMessage('Recordatorio eliminado correctamente.')
+    } catch (deleteError) {
+      setReminderError(deleteError.message)
+    }
+  }
+
+  const refreshAccounts = async () => {
+    try {
+      const accountsResult = await getAccounts()
+      setAccounts(accountsResult)
+    } catch (refreshError) {
+      setAccountError(refreshError.message)
+    }
   }
 
   const handleNewMovement = () => {
@@ -225,6 +500,7 @@ const monthlyTotals = useMemo(() => {
       description: movement.description || '',
       categoryId: movement.categoryId,
       paymentMethodId: movement.paymentMethodId,
+      accountId: movement.accountId || '',
     })
 
     setEditingMovementId(movement.id)
@@ -258,6 +534,7 @@ const monthlyTotals = useMemo(() => {
           description: formData.description.trim(),
           categoryId: formData.categoryId,
           paymentMethodId: formData.paymentMethodId,
+          accountId: formData.accountId,
         },
       })
 
@@ -272,6 +549,8 @@ const monthlyTotals = useMemo(() => {
       } else {
         setMovements((current) => [result, ...current])
       }
+
+      await refreshAccounts()
 
       resetForm()
       setIsFormOpen(false)
@@ -308,6 +587,8 @@ const monthlyTotals = useMemo(() => {
         current.filter((movement) => movement.id !== movementId),
       )
 
+      await refreshAccounts()
+
       setMessage('Movimiento eliminado correctamente.')
     } catch (deleteError) {
       setError(deleteError.message)
@@ -316,7 +597,51 @@ const monthlyTotals = useMemo(() => {
 
   return (
     <main className="app">
-      <Header onToggleForm={handleNewMovement} /> 
+      <Header onToggleForm={handleNewMovement} />
+      <AccountList
+        accounts={accounts}
+        loading={accountsLoading}
+        error={accountError}
+        formatMoney={formatMoney}
+        onAdd={handleNewAccount}
+      />
+      {isAccountFormOpen && (
+        <AccountForm
+          formData={accountFormData}
+          onChange={handleAccountChange}
+          onSubmit={handleAccountSubmit}
+          onCancel={handleAccountCancel}
+          saving={accountSaving}
+          error={accountError}
+        />
+      )}
+      {!isAccountFormOpen && accountMessage && (
+        <p className="form-message">{accountMessage}</p>
+      )}
+      <ReminderList
+        reminders={reminders}
+        loading={remindersLoading}
+        error={reminderError}
+        formatMoney={formatMoney}
+        onAdd={handleNewReminder}
+        onEdit={handleEditReminder}
+        onComplete={handleCompleteReminder}
+        onDelete={handleDeleteReminder}
+      />
+      {isReminderFormOpen && (
+        <ReminderForm
+          formData={reminderFormData}
+          onChange={handleReminderChange}
+          onSubmit={handleReminderSubmit}
+          onCancel={handleReminderCancel}
+          saving={reminderSaving}
+          error={reminderError}
+          isEditing={Boolean(editingReminderId)}
+        />
+      )}
+      {!isReminderFormOpen && reminderMessage && (
+        <p className="form-message">{reminderMessage}</p>
+      )}
       <MonthFilter
         value={selectedMonth}
         onChange={setSelectedMonth}
@@ -327,6 +652,7 @@ const monthlyTotals = useMemo(() => {
           formData={formData}
           categories={categories}
           paymentMethods={paymentMethods}
+          accounts={accounts}
           onChange={handleChange}
           onSubmit={handleSubmit}
           onCancel={handleCancel}

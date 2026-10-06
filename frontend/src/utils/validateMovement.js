@@ -35,6 +35,10 @@ const validateMovement = (formData) => {
     return 'Selecciona un método de pago.'
   }
 
+  if (!formData.accountId) {
+    return 'Selecciona una cuenta.'
+  }
+
   if (
     typeof formData.description !== 'string' ||
     formData.description.trim().length > MAX_DESCRIPTION_LENGTH

@@ -6,6 +6,8 @@ const healthRoutes = require("./routes/health.routes");
 const databaseRoutes = require("./routes/database.routes");
 const movementRoutes = require("./routes/movement.routes");
 const catalogRoutes = require("./routes/catalog.routes");
+const accountRoutes = require("./routes/account.routes");
+const reminderRoutes = require("./routes/reminder.routes");
 const { assertAppConfig } = require("./config/app");
 const {
   notFoundHandler,
@@ -24,6 +26,8 @@ app.use("/api/health", healthRoutes);
 app.use("/api/db-test", databaseRoutes);
 app.use("/api/movements", movementRoutes);
 app.use("/api/catalog", catalogRoutes);
+app.use("/api/accounts", accountRoutes);
+app.use("/api/reminders", reminderRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

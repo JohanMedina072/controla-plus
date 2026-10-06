@@ -9,6 +9,7 @@ const getAllMovements = async (userId) => {
     include: {
       category: true,
       paymentMethod: true,
+      account: true,
     },
     orderBy: {
       date: "desc",
@@ -16,8 +17,14 @@ const getAllMovements = async (userId) => {
   });
 };
 
-const validateReferences = async ({ userId, type, categoryId, paymentMethodId }) => {
-  const [category, paymentMethod] = await Promise.all([
+const validateReferences = async ({
+  userId,
+  type,
+  categoryId,
+  paymentMethodId,
+  accountId,
+}) => {
+  const [category, paymentMethod, account] = await Promise.all([
     prisma.category.findFirst({
       where: {
         id: categoryId,
@@ -29,6 +36,13 @@ const validateReferences = async ({ userId, type, categoryId, paymentMethodId })
       where: {
         id: paymentMethodId,
         userId,
+      },
+    }),
+    prisma.account.findFirst({
+      where: {
+        id: accountId,
+        userId,
+        isActive: true,
       },
     }),
   ]);
@@ -48,6 +62,14 @@ const validateReferences = async ({ userId, type, categoryId, paymentMethodId })
       "INVALID_PAYMENT_METHOD",
     );
   }
+
+  if (!account) {
+    throw new AppError(
+      "La cuenta no existe, no pertenece al usuario o está inactiva",
+      400,
+      "INVALID_ACCOUNT",
+    );
+  }
 };
 
 const createMovement = async (data) => {
@@ -62,10 +84,12 @@ const createMovement = async (data) => {
       userId: data.userId,
       categoryId: data.categoryId,
       paymentMethodId: data.paymentMethodId,
+      accountId: data.accountId,
     },
     include: {
       category: true,
       paymentMethod: true,
+      account: true,
     },
   });
 };
@@ -101,6 +125,7 @@ const updateMovement = async (id, userId, data) => {
         date: data.date ? new Date(data.date) : undefined,
         categoryId: data.categoryId,
         paymentMethodId: data.paymentMethodId,
+        accountId: data.accountId,
       },
     });
 
@@ -113,6 +138,7 @@ const updateMovement = async (id, userId, data) => {
       include: {
         category: true,
         paymentMethod: true,
+        account: true,
       },
     });
   });

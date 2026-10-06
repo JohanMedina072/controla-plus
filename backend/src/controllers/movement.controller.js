@@ -27,6 +27,7 @@ const createMovement = async (req, res, next) => {
       date,
       categoryId,
       paymentMethodId,
+      accountId,
     } = req.body;
 
     const validationMessage = validateMovementPayload({
@@ -36,6 +37,7 @@ const createMovement = async (req, res, next) => {
       date,
       categoryId,
       paymentMethodId,
+      accountId,
     });
 
     if (validationMessage) {
@@ -53,6 +55,7 @@ const createMovement = async (req, res, next) => {
       userId: getDefaultUserId(),
       categoryId,
       paymentMethodId,
+      accountId,
     });
 
     res.status(201).json({
@@ -99,6 +102,7 @@ const updateMovement = async (req, res, next) => {
       date,
       categoryId,
       paymentMethodId,
+      accountId,
     } = req.body;
 
     const idValidationMessage = validateMovementId(id);
@@ -117,6 +121,7 @@ const updateMovement = async (req, res, next) => {
       date,
       categoryId,
       paymentMethodId,
+      accountId,
     });
 
     if (validationMessage) {
@@ -133,6 +138,7 @@ const updateMovement = async (req, res, next) => {
       date,
       categoryId,
       paymentMethodId,
+      accountId,
     });
 
     res.json({

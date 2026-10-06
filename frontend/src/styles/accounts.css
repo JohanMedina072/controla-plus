@@ -1,0 +1,109 @@
+.accounts-section {
+  margin-bottom: 32px;
+  padding: 28px;
+  border: 1px solid #e5eaf2;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.accounts-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.accounts-header h2 {
+  margin-bottom: 6px;
+}
+
+.accounts-header p {
+  margin-bottom: 0;
+  color: #64748b;
+}
+
+.accounts-total {
+  display: block;
+  margin-top: 12px;
+  color: #172033;
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.account-card {
+  padding: 20px;
+  border: 1px solid #dbe4f0;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.account-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.account-card h3 {
+  margin: 0;
+  color: #172033;
+  font-size: 1rem;
+}
+
+.account-status {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.account-status.active {
+  color: #059669;
+}
+
+.account-label,
+.account-initial-balance {
+  display: block;
+  color: #64748b;
+}
+
+.account-label {
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+}
+
+.account-balance {
+  display: block;
+  margin-bottom: 12px;
+  color: #172033;
+  font-size: 1.65rem;
+}
+
+.account-initial-balance {
+  font-size: 0.82rem;
+}
+
+.account-form-section {
+  margin-top: -16px;
+}
+
+@media (max-width: 700px) {
+  .accounts-section {
+    padding: 20px;
+  }
+
+  .accounts-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .accounts-header button {
+    width: 100%;
+  }
+}

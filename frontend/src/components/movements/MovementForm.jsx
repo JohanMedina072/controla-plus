@@ -2,6 +2,7 @@ function MovementForm({
   formData,
   categories,
   paymentMethods,
+  accounts,
   onChange,
   onSubmit,
   onCancel,
@@ -88,6 +89,32 @@ function MovementForm({
             ))}
           </select>
         </label>
+
+        <label>
+          Cuenta
+          <select
+            name="accountId"
+            value={formData.accountId}
+            onChange={onChange}
+            required
+          >
+            <option value="">Selecciona una cuenta</option>
+
+            {accounts
+              .filter((account) => account.isActive)
+              .map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name}
+                </option>
+              ))}
+          </select>
+        </label>
+
+        {accounts.filter((account) => account.isActive).length === 0 && (
+          <p className="form-error">
+            Crea una cuenta activa antes de registrar un movimiento.
+          </p>
+        )}
 
         <div className="form-actions">
           <button type="submit" className="primary-button" disabled={saving}>

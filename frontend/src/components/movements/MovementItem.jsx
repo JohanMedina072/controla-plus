@@ -3,7 +3,10 @@ function MovementItem({ movement, onEdit, onDelete, formatMoney }) {
     <article className="movement-item">
       <div>
         <strong>{movement.description || 'Sin descripción'}</strong>
-        <span>{movement.category?.name || 'Sin categoría'}</span>
+        <span>
+          {movement.category?.name || 'Sin categoría'} ·{' '}
+          {movement.account?.name || 'Sin cuenta'}
+        </span>
       </div>
 
       <div className="movement-actions">

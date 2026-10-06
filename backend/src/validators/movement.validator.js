@@ -14,6 +14,7 @@ const validateMovementPayload = (payload = {}) => {
     description,
     categoryId,
     paymentMethodId,
+    accountId,
     date,
   } = payload;
 
@@ -62,6 +63,10 @@ const validateMovementPayload = (payload = {}) => {
 
   if (!isValidUuid(paymentMethodId)) {
     return "paymentMethodId debe ser un UUID válido";
+  }
+
+  if (!isValidUuid(accountId)) {
+    return "accountId debe ser un UUID válido";
   }
 
   if (
