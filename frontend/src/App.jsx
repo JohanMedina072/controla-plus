@@ -4,6 +4,7 @@ import './App.css'
 import AuthPage from './components/auth/AuthPage'
 import ProfileForm from './components/auth/ProfileForm'
 import Header from './components/layout/Header'
+import Sidebar from './components/layout/Sidebar'
 import AccountList from './components/accounts/AccountList'
 import AccountForm from './components/accounts/AccountForm'
 import QuickMovementForm from './components/movements/QuickMovementForm'
@@ -14,7 +15,6 @@ import SummaryCards from './components/dashboard/SummaryCards'
 import InsightsPanel from './components/dashboard/InsightsPanel'
 import MovementList from './components/movements/MovementList'
 import MovementForm from './components/movements/MovementForm'
-import MonthFilter from './components/dashboard/MonthFilter'
 import CategorySummary from './components/dashboard/CategorySummary'
 import ExpenseChart from './components/dashboard/ExpenseChart'
 import MonthlyChart from './components/dashboard/MonthlyChart'
@@ -59,6 +59,7 @@ function App() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [selectedMonth, setSelectedMonth] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
   const [accounts, setAccounts] = useState([])
   const [accountsLoading, setAccountsLoading] = useState(true)
   const [accountError, setAccountError] = useState('')
@@ -187,15 +188,33 @@ function App() {
     })
   }, [voiceDraft])
 
-  const filteredMovements = useMemo(() => {
-    if (!selectedMonth) {
-      return movements
-    }
+  const searchFilteredMovements = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLocaleLowerCase('es-PE')
 
-    return movements.filter((movement) =>
-      movement.date?.slice(0, 7) === selectedMonth,
+    return movements.filter((movement) => {
+      if (!normalizedSearch) return true
+
+      const searchableText = [
+        movement.description,
+        movement.category?.name,
+        movement.account?.name,
+        movement.paymentMethod?.name,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase('es-PE')
+
+      return searchableText.includes(normalizedSearch)
+    })
+  }, [movements, searchTerm])
+
+  const filteredMovements = useMemo(() => {
+    if (!selectedMonth) return searchFilteredMovements
+
+    return searchFilteredMovements.filter(
+      (movement) => movement.date?.slice(0, 7) === selectedMonth,
     )
-  }, [movements, selectedMonth])
+  }, [searchFilteredMovements, selectedMonth])
 
   const categoryTotals = useMemo(() => {
     const totalsByCategory = filteredMovements
@@ -227,7 +246,7 @@ function App() {
   }, [filteredMovements])
 
 const monthlyTotals = useMemo(() => {
-  const totalsByMonth = movements.reduce((accumulator, movement) => {
+  const totalsByMonth = searchFilteredMovements.reduce((accumulator, movement) => {
     const month = movement.date?.slice(0, 7)
 
     if (!month) return accumulator
@@ -260,7 +279,7 @@ const monthlyTotals = useMemo(() => {
         year: 'numeric',
       }).format(new Date(`${item.month}-01T00:00:00`)),
     }))
-}, [movements])
+}, [searchFilteredMovements])
 
 
   const totals = useMemo(() => {
@@ -283,8 +302,16 @@ const monthlyTotals = useMemo(() => {
   const balance = totals.income - totals.expenses
 
   const spendingInsights = useMemo(
-    () => getSpendingInsights(movements, selectedMonth),
-    [movements, selectedMonth],
+    () => getSpendingInsights(searchFilteredMovements, selectedMonth),
+    [searchFilteredMovements, selectedMonth],
+  )
+
+  const availableBalance = useMemo(
+    () =>
+      accounts
+        .filter((account) => account.isActive)
+        .reduce((total, account) => total + Number(account.currentBalance), 0),
+    [accounts],
   )
 
   const resetForm = () => {
@@ -829,17 +856,38 @@ const monthlyTotals = useMemo(() => {
     }
   }
 
+  const handleNavigate = (sectionId) => {
+    document.getElementById(sectionId)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    })
+  }
+
   if (!auth) {
     return <AuthPage onAuthenticated={handleAuthenticated} />
   }
 
   return (
-    <main className="app">
-      <Header
+    <main className="app-shell">
+      <Sidebar
         user={auth.user}
+        onNavigate={handleNavigate}
         onToggleForm={handleNewMovement}
         onToggleProfile={handleProfileOpen}
         onLogout={handleLogout}
+      />
+
+      <div className="app">
+      <Header
+        user={auth.user}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onOpenReminders={() => handleNavigate('reminders-section')}
+        onToggleProfile={handleProfileOpen}
+        reminderCount={reminders.length}
+        selectedMonth={selectedMonth}
+        onMonthChange={setSelectedMonth}
+        onClearMonth={() => setSelectedMonth('')}
       />
       {isProfileOpen && (
         <ProfileForm
@@ -851,87 +899,100 @@ const monthlyTotals = useMemo(() => {
       {!isProfileOpen && profileMessage && (
         <p className="form-message">{profileMessage}</p>
       )}
-      <QuickMovementForm
-        formData={quickFormData}
-        categories={categories}
-        paymentMethods={paymentMethods}
-        accounts={accounts}
-        onChange={handleQuickChange}
-        onSubmit={handleQuickSubmit}
-        onOpenDetailed={handleNewMovement}
-        saving={quickSaving}
-        error={quickError}
-        message={quickMessage}
-        onVoiceTranscript={handleVoiceTranscript}
-      />
-      {voiceDraft && (
-        <div ref={voiceReviewRef} className="voice-review-anchor">
-          <VoiceMovementReview
-            key={voiceDraft.transcript}
-            draft={voiceDraft}
+      <div className="dashboard-hero-grid">
+        <div className="dashboard-summary-column">
+          <SummaryCards
+            balance={balance}
+            availableBalance={availableBalance}
+            income={totals.income}
+            expenses={totals.expenses}
+            monthlyChange={spendingInsights.changePercentage}
+            formatMoney={formatMoney}
+          />
+        </div>
+
+        <div className="dashboard-quick-column">
+          <QuickMovementForm
+            formData={quickFormData}
             categories={categories}
             paymentMethods={paymentMethods}
             accounts={accounts}
-            onSubmit={handleVoiceSubmit}
-            onCancel={handleVoiceCancel}
-            saving={voiceSaving}
-            error={voiceError}
+            onChange={handleQuickChange}
+            onSubmit={handleQuickSubmit}
+            onOpenDetailed={handleNewMovement}
+            saving={quickSaving}
+            error={quickError}
+            message={quickMessage}
+            onVoiceTranscript={handleVoiceTranscript}
           />
+          {voiceDraft && (
+            <div ref={voiceReviewRef} className="voice-review-anchor">
+              <VoiceMovementReview
+                key={voiceDraft.transcript}
+                draft={voiceDraft}
+                categories={categories}
+                paymentMethods={paymentMethods}
+                accounts={accounts}
+                onSubmit={handleVoiceSubmit}
+                onCancel={handleVoiceCancel}
+                saving={voiceSaving}
+                error={voiceError}
+              />
+            </div>
+          )}
         </div>
-      )}
-      <AccountList
-        accounts={accounts}
-        loading={accountsLoading}
-        error={accountError}
-        formatMoney={formatMoney}
-        onAdd={handleNewAccount}
-      />
-      {isAccountFormOpen && (
-        <AccountForm
-          formData={accountFormData}
-          onChange={handleAccountChange}
-          onSubmit={handleAccountSubmit}
-          onCancel={handleAccountCancel}
-          saving={accountSaving}
-          error={accountError}
-        />
-      )}
-      {!isAccountFormOpen && accountMessage && (
-        <p className="form-message">{accountMessage}</p>
-      )}
-      <ReminderList
-        reminders={reminders}
-        loading={remindersLoading}
-        error={reminderError}
-        formatMoney={formatMoney}
-        onAdd={handleNewReminder}
-        onEdit={handleEditReminder}
-        onComplete={handleCompleteReminder}
-        onDelete={handleDeleteReminder}
-      />
-      {isReminderFormOpen && (
-        <ReminderForm
-          formData={reminderFormData}
-          onChange={handleReminderChange}
-          onSubmit={handleReminderSubmit}
-          onCancel={handleReminderCancel}
-          saving={reminderSaving}
-          error={reminderError}
-          isEditing={Boolean(editingReminderId)}
-        />
-      )}
-      {!isReminderFormOpen && reminderMessage && (
-        <p className="form-message">{reminderMessage}</p>
-      )}
-      <MonthFilter
-        value={selectedMonth}
-        onChange={setSelectedMonth}
-        onClear={() => setSelectedMonth('')}
-      />
-      <InsightsPanel
-        insights={spendingInsights}
-        formatMoney={formatMoney}
-      />
+      </div>
+      <div className="dashboard-secondary-grid">
+        <div className="dashboard-secondary-panel">
+          <AccountList
+            accounts={accounts}
+            loading={accountsLoading}
+            error={accountError}
+            formatMoney={formatMoney}
+            onAdd={handleNewAccount}
+          />
+          {isAccountFormOpen && (
+            <AccountForm
+              formData={accountFormData}
+              onChange={handleAccountChange}
+              onSubmit={handleAccountSubmit}
+              onCancel={handleAccountCancel}
+              saving={accountSaving}
+              error={accountError}
+            />
+          )}
+          {!isAccountFormOpen && accountMessage && (
+            <p className="form-message">{accountMessage}</p>
+          )}
+        </div>
+
+        <div className="dashboard-secondary-panel">
+          <ReminderList
+            reminders={reminders}
+            loading={remindersLoading}
+            error={reminderError}
+            formatMoney={formatMoney}
+            onAdd={handleNewReminder}
+            onEdit={handleEditReminder}
+            onComplete={handleCompleteReminder}
+            onDelete={handleDeleteReminder}
+          />
+          {isReminderFormOpen && (
+            <ReminderForm
+              formData={reminderFormData}
+              onChange={handleReminderChange}
+              onSubmit={handleReminderSubmit}
+              onCancel={handleReminderCancel}
+              saving={reminderSaving}
+              error={reminderError}
+              isEditing={Boolean(editingReminderId)}
+            />
+          )}
+          {!isReminderFormOpen && reminderMessage && (
+            <p className="form-message">{reminderMessage}</p>
+          )}
+        </div>
+      </div>
       {isFormOpen && (
         <MovementForm
           formData={formData}
@@ -952,40 +1013,41 @@ const monthlyTotals = useMemo(() => {
         <p className="form-message">{message}</p>
       )}
 
-      <SummaryCards
-        balance={balance}
-        income={totals.income}
-        expenses={totals.expenses}
-        formatMoney={formatMoney}
-      />
-      <CategorySummary
-        categories={categoryTotals}
-        formatMoney={formatMoney}
-      />
-      <ExpenseChart
-        categories={categoryTotals}
-        formatMoney={formatMoney}
-      />
+      <section id="reports-section" className="reports-section">
+        <InsightsPanel
+          insights={spendingInsights}
+          formatMoney={formatMoney}
+        />
 
-      <MonthlyChart
-        data={monthlyTotals}
-        formatMoney={formatMoney}
-      />
+        <CategorySummary
+          categories={categoryTotals}
+          formatMoney={formatMoney}
+        />
+        <ExpenseChart
+          categories={categoryTotals}
+          formatMoney={formatMoney}
+        />
 
-      <div className="dashboard-actions">
-        <button
-          type="button"
-          className="export-button"
-          onClick={() =>
-            exportMovementsToExcel(filteredMovements, selectedMonth)
-          }
-          disabled={filteredMovements.length === 0}
-        >
-          Exportar a Excel
-        </button>
-      </div>
+        <MonthlyChart
+          data={monthlyTotals}
+          formatMoney={formatMoney}
+        />
 
-      <section className="movements-section">
+        <div className="dashboard-actions">
+          <button
+            type="button"
+            className="export-button"
+            onClick={() =>
+              exportMovementsToExcel(filteredMovements, selectedMonth)
+            }
+            disabled={filteredMovements.length === 0}
+          >
+            Exportar a Excel
+          </button>
+        </div>
+      </section>
+
+      <section id="movements-section" className="movements-section">
         <div className="section-title">
           <h2>Movimientos recientes</h2>
           <p>Datos obtenidos desde PostgreSQL.</p>
@@ -1008,6 +1070,7 @@ const monthlyTotals = useMemo(() => {
           />
         )}
       </section>
+      </div>
     </main>
   )
 }

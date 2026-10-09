@@ -22,7 +22,7 @@ function ExpenseChart({ categories, formatMoney }) {
       <h2>Distribución de gastos</h2>
 
       <div className="chart-container">
-        <ResponsiveContainer width="100%" height={320}>
+        <ResponsiveContainer width="100%" height={250}>
           <PieChart>
             <Pie
               data={chartData}
@@ -30,7 +30,7 @@ function ExpenseChart({ categories, formatMoney }) {
               nameKey="name"
               cx="50%"
               cy="50%"
-              outerRadius={105}
+              outerRadius={82}
               label
             >
               {chartData.map((category, index) => (

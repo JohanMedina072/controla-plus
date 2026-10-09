@@ -1,0 +1,144 @@
+/* Ajustes de uso táctil y pantallas pequeñas. La lógica de la aplicación no cambia. */
+
+button,
+input,
+select,
+summary {
+  touch-action: manipulation;
+}
+
+@media (max-width: 700px) {
+  .app {
+    padding: 24px 16px 40px;
+  }
+
+  .header {
+    gap: 18px;
+    margin-bottom: 24px;
+  }
+
+  .header-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .header-actions > button,
+  .dashboard-actions .export-button,
+  .accounts-header button,
+  .reminders-header button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .quick-entry-section,
+  .voice-review-section,
+  .form-section,
+  .accounts-section,
+  .reminders-section,
+  .insights-section,
+  .category-summary,
+  .expense-chart,
+  .monthly-chart,
+  .movements-section {
+    border-radius: 14px;
+  }
+
+  .quick-entry-header-actions,
+  .quick-entry-header-actions .voice-entry {
+    width: 100%;
+  }
+
+  .quick-entry-header-actions .voice-button,
+  .quick-entry-header-actions > .secondary-button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .voice-text-fallback form {
+    grid-template-columns: 1fr;
+  }
+
+  .voice-text-fallback input,
+  .voice-text-fallback .secondary-button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .month-filter-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .month-filter-controls input,
+  .month-filter-controls button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .chart-container {
+    height: 260px;
+  }
+
+  .movement-item {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .movement-actions {
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
+  .movement-actions .edit-button,
+  .movement-actions .delete-button {
+    min-height: 36px;
+    padding: 8px 4px;
+  }
+
+  .account-card,
+  .summary-card,
+  .insight-card {
+    padding: 18px;
+  }
+
+  .form-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .form-actions > button {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 420px) {
+  .app {
+    padding: 20px 12px 32px;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  .quick-entry-section,
+  .voice-review-section,
+  .form-section,
+  .accounts-section,
+  .reminders-section,
+  .insights-section,
+  .category-summary,
+  .expense-chart,
+  .monthly-chart,
+  .movements-section {
+    padding: 16px;
+  }
+
+  .chart-container {
+    height: 220px;
+  }
+}

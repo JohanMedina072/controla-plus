@@ -6,7 +6,7 @@ function AccountList({ accounts, loading, error, formatMoney, onAdd }) {
   )
 
   return (
-    <section className="accounts-section">
+    <section id="accounts-section" className="accounts-section">
       <div className="accounts-header">
         <div>
           <h2>Cuentas</h2>
@@ -32,10 +32,19 @@ function AccountList({ accounts, loading, error, formatMoney, onAdd }) {
 
       {!loading && !error && accounts.length > 0 && (
         <div className="account-grid">
-          {accounts.map((account) => (
-            <article className="account-card" key={account.id}>
+          {accounts.map((account, index) => (
+            <article
+              className={`account-card account-card-variant-${index % 3}`}
+              key={account.id}
+            >
               <div className="account-card-header">
-                <h3>{account.name}</h3>
+                <span className="account-card-icon" aria-hidden="true">
+                  {(account.name || '?').slice(0, 1).toUpperCase()}
+                </span>
+                <div className="account-card-title">
+                  <h3>{account.name}</h3>
+                  <span className="account-card-caption">Cuenta personal</span>
+                </div>
                 <span className={account.isActive ? 'account-status active' : 'account-status'}>
                   {account.isActive ? 'Activa' : 'Inactiva'}
                 </span>

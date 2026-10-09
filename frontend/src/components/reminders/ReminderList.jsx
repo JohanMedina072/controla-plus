@@ -11,7 +11,7 @@ function ReminderList({
   onDelete,
 }) {
   return (
-    <section className="reminders-section">
+    <section id="reminders-section" className="reminders-section">
       <div className="reminders-header">
         <div>
           <h2>Recordatorios de pagos</h2>
