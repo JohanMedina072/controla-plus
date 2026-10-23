@@ -62,6 +62,7 @@ model PaymentReminder {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isActive])
+  @@index([userId, nextDueDate])
 }
 
 model Category {
@@ -81,6 +82,7 @@ model PaymentMethod {
   userId    String     @db.Uuid
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   movements Movement[]
+  @@unique([name, userId])
 }
 
 model Movement {
@@ -99,4 +101,6 @@ model Movement {
   category      Category      @relation(fields: [categoryId], references: [id])
   paymentMethod PaymentMethod @relation(fields: [paymentMethodId], references: [id])
   account       Account?      @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  @@index([userId, date])
+  @@index([accountId, date])
 }
