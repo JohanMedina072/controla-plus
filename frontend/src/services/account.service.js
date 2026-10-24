@@ -22,3 +22,13 @@ export const saveAccount = async (data) => {
     'No se pudo crear la cuenta',
   )
 }
+
+export const removeAccount = async (accountId) => {
+  return requestJson(
+    `${ACCOUNTS_URL}/${accountId}`,
+    {
+      method: 'DELETE',
+    },
+    'No se pudo eliminar la cuenta',
+  )
+}

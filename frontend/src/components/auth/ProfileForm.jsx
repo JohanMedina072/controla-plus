@@ -63,7 +63,7 @@ function ProfileForm({ user, onCancel, onUpdated }) {
   }
 
   return (
-    <section className="profile-section" aria-labelledby="profile-title">
+    <section id="profile" className="profile-section" aria-labelledby="profile-title">
       <div className="profile-header">
         <div>
           <p className="eyebrow">CONFIGURACIÓN DE USUARIO</p>

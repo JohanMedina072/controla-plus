@@ -45,7 +45,24 @@ const createAccount = async (req, res, next) => {
   }
 };
 
+const deleteAccount = async (req, res, next) => {
+  try {
+    await accountService.deleteAccount({
+      userId: req.user.id,
+      accountId: req.params.id,
+    })
+
+    res.json({
+      ok: true,
+      message: 'Cuenta eliminada correctamente',
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   listAccounts,
   createAccount,
+  deleteAccount,
 };

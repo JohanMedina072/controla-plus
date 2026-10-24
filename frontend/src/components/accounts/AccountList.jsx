@@ -1,4 +1,4 @@
-function AccountList({ accounts, loading, error, formatMoney, onAdd }) {
+function AccountList({ accounts, loading, error, formatMoney, onAdd, onDelete }) {
   const activeAccounts = accounts.filter((account) => account.isActive)
   const totalBalance = activeAccounts.reduce(
     (total, account) => total + Number(account.currentBalance),
@@ -58,6 +58,15 @@ function AccountList({ accounts, loading, error, formatMoney, onAdd }) {
               <span className="account-initial-balance">
                 Saldo inicial: {formatMoney(account.initialBalance)}
               </span>
+
+              <button
+                type="button"
+                className="account-delete-button"
+                onClick={() => onDelete(account)}
+                aria-label={`Eliminar cuenta ${account.name}`}
+              >
+                Eliminar cuenta
+              </button>
             </article>
           ))}
         </div>

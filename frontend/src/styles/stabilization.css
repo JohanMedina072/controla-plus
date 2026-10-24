@@ -1,0 +1,282 @@
+/*
+ * Estabilización de navegación, responsive y acciones flotantes.
+ * Esta capa solo ajusta presentación y desplazamiento; no contiene lógica de negocio.
+ */
+
+#dashboard-overview,
+#accounts-section,
+#movement-form-section,
+#account-form-section,
+#reminder-form-section,
+#reminders-section,
+#reports-section,
+#movements-section,
+#profile {
+  scroll-margin-top: 28px;
+}
+
+.movement-form-section {
+  width: 100%;
+  min-width: 0;
+  margin: 0 0 24px;
+}
+
+.movement-form-section > .form-section {
+  margin-bottom: 0;
+}
+
+.inline-form-anchor {
+  min-width: 0;
+  margin-top: 16px;
+  scroll-margin-top: 28px;
+}
+
+.dashboard-hero-grid,
+.dashboard-secondary-grid,
+.reports-section,
+.movements-section,
+.accounts-section,
+.reminders-section,
+.quick-entry-section,
+.form-section,
+.insights-section,
+.category-summary,
+.expense-chart,
+.monthly-chart {
+  min-width: 0;
+}
+
+.dashboard-hero-grid-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.account-card .account-delete-button {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  margin-top: 12px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.94);
+  background: rgba(15, 35, 95, 0.24);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.account-card .account-delete-button:hover,
+.account-card .account-delete-button:focus-visible {
+  border-color: rgba(255, 255, 255, 0.8);
+  background: rgba(15, 35, 95, 0.5);
+}
+
+@media (max-width: 860px) {
+  .app-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-sidebar,
+  .app {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  #dashboard-overview,
+  #accounts-section,
+  #movement-form-section,
+  #account-form-section,
+  #reminder-form-section,
+  #reminders-section,
+  #reports-section,
+  #movements-section,
+  #profile {
+    scroll-margin-top: 148px;
+  }
+
+  .app {
+    width: 100%;
+    min-width: 0;
+    overflow: visible;
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .app > *,
+  .dashboard-hero-grid > *,
+  .dashboard-secondary-grid > *,
+  .reports-section > * {
+    min-width: 0;
+  }
+
+  .dashboard-hero-grid,
+  .dashboard-secondary-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .dashboard-summary-column,
+  .dashboard-quick-column,
+  .dashboard-secondary-panel {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .dashboard-summary {
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto;
+    gap: 10px;
+  }
+
+  .summary-balance-card,
+  .summary-variation-card {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+
+  .summary-stat-income,
+  .summary-stat-expense {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .quick-entry-form,
+  .quick-entry-options-grid,
+  .form-section form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .quick-entry-form > *,
+  .quick-entry-options-grid > *,
+  .form-section form > * {
+    min-width: 0;
+  }
+
+  .quick-entry-actions,
+  .form-actions {
+    width: 100%;
+  }
+
+  .quick-entry-actions > button,
+  .form-actions > button {
+    width: 100%;
+  }
+
+  .accounts-section,
+  .reminders-section,
+  .movement-form-section,
+  .movements-section {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .account-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .reports-section {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .reports-section > .insights-section,
+  .reports-section > .category-summary,
+  .reports-section > .expense-chart,
+  .reports-section > .monthly-chart,
+  .reports-section > .dashboard-actions {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .chart-container,
+  .recharts-responsive-container {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .section-title {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .movement-item-main,
+  .reminder-item-main,
+  .account-card-title {
+    min-width: 0;
+  }
+
+  .movement-item-main strong,
+  .movement-item-main span,
+  .reminder-item h3,
+  .reminder-item p,
+  .account-card h3 {
+    overflow-wrap: anywhere;
+  }
+
+  .form-error,
+  .form-message,
+  .error {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 420px) {
+  .app {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .dashboard-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .summary-balance-card,
+  .summary-stat-income,
+  .summary-stat-expense,
+  .summary-variation-card {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .account-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .accounts-section,
+  .reminders-section,
+  .movement-form-section,
+  .movements-section,
+  .quick-entry-section,
+  .form-section {
+    padding: 16px;
+  }
+
+  .reminder-item {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .reminder-actions {
+    grid-column: 2;
+  }
+
+  .movements-section .movement-item {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .movements-section .movement-actions {
+    grid-column: 1 / -1;
+  }
+
+  .account-card .account-delete-button {
+    width: 100%;
+  }
+}

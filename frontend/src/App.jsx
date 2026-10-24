@@ -7,7 +7,7 @@ import Header from './components/layout/Header'
 import Sidebar from './components/layout/Sidebar'
 import AccountList from './components/accounts/AccountList'
 import AccountForm from './components/accounts/AccountForm'
-import QuickMovementForm from './components/movements/QuickMovementForm'
+import VoiceMovementButton from './components/movements/VoiceMovementButton'
 import VoiceMovementReview from './components/movements/VoiceMovementReview'
 import ReminderList from './components/reminders/ReminderList'
 import ReminderForm from './components/reminders/ReminderForm'
@@ -33,7 +33,7 @@ import {
   removeMovement,
   saveMovement,
 } from './services/movement.service'
-import { getAccounts, saveAccount } from './services/account.service'
+import { getAccounts, removeAccount, saveAccount } from './services/account.service'
 import {
   completeReminder,
   getReminders,
@@ -92,17 +92,6 @@ function App() {
     paymentMethodId: '',
     accountId: '',
   })
-  const [quickFormData, setQuickFormData] = useState({
-    type: 'EXPENSE',
-    amount: '',
-    description: '',
-    categoryId: '',
-    paymentMethodId: '',
-    accountId: '',
-  })
-  const [quickSaving, setQuickSaving] = useState(false)
-  const [quickError, setQuickError] = useState('')
-  const [quickMessage, setQuickMessage] = useState('')
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [profileMessage, setProfileMessage] = useState('')
   const [voiceDraft, setVoiceDraft] = useState(null)
@@ -155,12 +144,6 @@ function App() {
         )
 
         setFormData((current) => ({
-          ...current,
-          categoryId: firstExpenseCategory?.id || '',
-          paymentMethodId: catalogResult.paymentMethods[0]?.id || '',
-        }))
-
-        setQuickFormData((current) => ({
           ...current,
           categoryId: firstExpenseCategory?.id || '',
           paymentMethodId: catalogResult.paymentMethods[0]?.id || '',
@@ -391,6 +374,30 @@ const monthlyTotals = useMemo(() => {
     }
   }
 
+  const handleDeleteAccount = async (account) => {
+    const confirmed = window.confirm(
+      `¿Seguro que deseas eliminar la cuenta "${account.name}"?`,
+    )
+
+    if (!confirmed) return
+
+    setAccountError('')
+    setAccountMessage('')
+
+    try {
+      await removeAccount(account.id)
+
+      setAccounts((current) =>
+        current.filter((currentAccount) => currentAccount.id !== account.id),
+      )
+      setAccountMessage('Cuenta eliminada correctamente.')
+    } catch (deleteError) {
+      setAccountError(
+        deleteError.message || 'No se pudo eliminar la cuenta.',
+      )
+    }
+  }
+
   const resetReminderForm = () => {
     setReminderFormData({
       type: 'CREDIT_CARD',
@@ -559,41 +566,6 @@ const monthlyTotals = useMemo(() => {
     setIsFormOpen(true)
   }
 
-  const resetQuickForm = () => {
-    setQuickFormData({
-      type: 'EXPENSE',
-      amount: '',
-      description: '',
-      categoryId:
-        categories.find((category) => category.type === 'EXPENSE')?.id || '',
-      paymentMethodId: paymentMethods[0]?.id || '',
-      accountId: '',
-    })
-  }
-
-  const handleQuickChange = (event) => {
-    const { name, value } = event.target
-
-    setQuickFormData((current) => {
-      if (name === 'type') {
-        const firstCategory = categories.find(
-          (category) => category.type === value,
-        )
-
-        return {
-          ...current,
-          type: value,
-          categoryId: firstCategory?.id || '',
-        }
-      }
-
-      return {
-        ...current,
-        [name]: value,
-      }
-    })
-  }
-
   const handleCancel = () => {
     resetForm()
     setMessage('')
@@ -698,47 +670,6 @@ const monthlyTotals = useMemo(() => {
       )
     } finally {
       setSaving(false)
-    }
-  }
-
-  const handleQuickSubmit = async (event) => {
-    event.preventDefault()
-    setQuickError('')
-    setQuickMessage('')
-
-    const validationMessage = validateMovement(quickFormData)
-
-    if (validationMessage) {
-      setQuickError(validationMessage)
-      return
-    }
-
-    try {
-      setQuickSaving(true)
-
-      const result = await saveMovement({
-        movementId: null,
-        data: {
-          type: quickFormData.type,
-          amount: Number(quickFormData.amount),
-          description: quickFormData.description.trim(),
-          categoryId: quickFormData.categoryId,
-          paymentMethodId: quickFormData.paymentMethodId,
-          accountId: quickFormData.accountId,
-        },
-      })
-
-      setMovements((current) => [result, ...current])
-      await refreshAccounts()
-      resetQuickForm()
-      setQuickMessage('Movimiento guardado correctamente.')
-    } catch (submitError) {
-      setQuickError(
-        submitError.message ||
-          'Ocurrió un error al guardar el movimiento.',
-      )
-    } finally {
-      setQuickSaving(false)
     }
   }
 
@@ -863,6 +794,58 @@ const monthlyTotals = useMemo(() => {
     })
   }
 
+  useEffect(() => {
+    if (!isFormOpen) return
+
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById('movement-form-section')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [isFormOpen, editingMovementId])
+
+  useEffect(() => {
+    if (!isProfileOpen) return
+
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById('profile')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [isProfileOpen])
+
+  useEffect(() => {
+    if (!isAccountFormOpen) return
+
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById('account-form-section')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [isAccountFormOpen])
+
+  useEffect(() => {
+    if (!isReminderFormOpen) return
+
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById('reminder-form-section')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [isReminderFormOpen, editingReminderId])
+
   if (!auth) {
     return <AuthPage onAuthenticated={handleAuthenticated} />
   }
@@ -899,7 +882,7 @@ const monthlyTotals = useMemo(() => {
       {!isProfileOpen && profileMessage && (
         <p className="form-message">{profileMessage}</p>
       )}
-      <div className="dashboard-hero-grid">
+      <div className="dashboard-hero-grid dashboard-hero-grid-single">
         <div className="dashboard-summary-column">
           <SummaryCards
             balance={balance}
@@ -910,38 +893,25 @@ const monthlyTotals = useMemo(() => {
             formatMoney={formatMoney}
           />
         </div>
+      </div>
 
-        <div className="dashboard-quick-column">
-          <QuickMovementForm
-            formData={quickFormData}
+      <VoiceMovementButton onTranscript={handleVoiceTranscript} />
+
+      {voiceDraft && (
+        <div ref={voiceReviewRef} className="voice-review-anchor">
+          <VoiceMovementReview
+            key={voiceDraft.transcript}
+            draft={voiceDraft}
             categories={categories}
             paymentMethods={paymentMethods}
             accounts={accounts}
-            onChange={handleQuickChange}
-            onSubmit={handleQuickSubmit}
-            onOpenDetailed={handleNewMovement}
-            saving={quickSaving}
-            error={quickError}
-            message={quickMessage}
-            onVoiceTranscript={handleVoiceTranscript}
+            onSubmit={handleVoiceSubmit}
+            onCancel={handleVoiceCancel}
+            saving={voiceSaving}
+            error={voiceError}
           />
-          {voiceDraft && (
-            <div ref={voiceReviewRef} className="voice-review-anchor">
-              <VoiceMovementReview
-                key={voiceDraft.transcript}
-                draft={voiceDraft}
-                categories={categories}
-                paymentMethods={paymentMethods}
-                accounts={accounts}
-                onSubmit={handleVoiceSubmit}
-                onCancel={handleVoiceCancel}
-                saving={voiceSaving}
-                error={voiceError}
-              />
-            </div>
-          )}
         </div>
-      </div>
+      )}
       <div className="dashboard-secondary-grid">
         <div className="dashboard-secondary-panel">
           <AccountList
@@ -950,16 +920,22 @@ const monthlyTotals = useMemo(() => {
             error={accountError}
             formatMoney={formatMoney}
             onAdd={handleNewAccount}
+            onDelete={handleDeleteAccount}
           />
           {isAccountFormOpen && (
-            <AccountForm
-              formData={accountFormData}
-              onChange={handleAccountChange}
-              onSubmit={handleAccountSubmit}
-              onCancel={handleAccountCancel}
-              saving={accountSaving}
-              error={accountError}
-            />
+            <section
+              id="account-form-section"
+              className="inline-form-anchor"
+            >
+              <AccountForm
+                formData={accountFormData}
+                onChange={handleAccountChange}
+                onSubmit={handleAccountSubmit}
+                onCancel={handleAccountCancel}
+                saving={accountSaving}
+                error={accountError}
+              />
+            </section>
           )}
           {!isAccountFormOpen && accountMessage && (
             <p className="form-message">{accountMessage}</p>
@@ -978,15 +954,20 @@ const monthlyTotals = useMemo(() => {
             onDelete={handleDeleteReminder}
           />
           {isReminderFormOpen && (
-            <ReminderForm
-              formData={reminderFormData}
-              onChange={handleReminderChange}
-              onSubmit={handleReminderSubmit}
-              onCancel={handleReminderCancel}
-              saving={reminderSaving}
-              error={reminderError}
-              isEditing={Boolean(editingReminderId)}
-            />
+            <section
+              id="reminder-form-section"
+              className="inline-form-anchor"
+            >
+              <ReminderForm
+                formData={reminderFormData}
+                onChange={handleReminderChange}
+                onSubmit={handleReminderSubmit}
+                onCancel={handleReminderCancel}
+                saving={reminderSaving}
+                error={reminderError}
+                isEditing={Boolean(editingReminderId)}
+              />
+            </section>
           )}
           {!isReminderFormOpen && reminderMessage && (
             <p className="form-message">{reminderMessage}</p>
@@ -994,19 +975,24 @@ const monthlyTotals = useMemo(() => {
         </div>
       </div>
       {isFormOpen && (
-        <MovementForm
-          formData={formData}
-          categories={categories}
-          paymentMethods={paymentMethods}
-          accounts={accounts}
-          onChange={handleChange}
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-          saving={saving}
-          error={error}
-          message={message}
-          isEditing={Boolean(editingMovementId)}
-        />
+        <section
+          id="movement-form-section"
+          className="movement-form-section"
+        >
+          <MovementForm
+            formData={formData}
+            categories={categories}
+            paymentMethods={paymentMethods}
+            accounts={accounts}
+            onChange={handleChange}
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+            saving={saving}
+            error={error}
+            message={message}
+            isEditing={Boolean(editingMovementId)}
+          />
+        </section>
       )}
 
       {!isFormOpen && message && (

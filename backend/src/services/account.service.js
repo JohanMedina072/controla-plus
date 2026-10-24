@@ -64,7 +64,48 @@ const createAccount = async ({ userId, name, initialBalance }) => {
   return serializeAccount(account);
 };
 
+
+const deleteAccount = async ({ userId, accountId }) => {
+  const account = await prisma.account.findFirst({
+    where: {
+      id: accountId,
+      userId,
+    },
+    select: {
+      id: true,
+      _count: {
+        select: {
+          movements: true,
+        },
+      },
+    },
+  });
+
+  if (!account) {
+    const error = new Error('Cuenta no encontrada.');
+    error.statusCode = 404;
+    error.code = 'ACCOUNT_NOT_FOUND';
+    throw error;
+  }
+
+  if (account._count.movements > 0) {
+    const error = new Error(
+      'No puedes eliminar una cuenta que tiene movimientos asociados. Conserva la cuenta para mantener el historial.',
+    );
+    error.statusCode = 409;
+    error.code = 'ACCOUNT_HAS_MOVEMENTS';
+    throw error;
+  }
+
+  await prisma.account.delete({
+    where: {
+      id: account.id,
+    },
+  });
+};
+
 module.exports = {
   getAllAccounts,
   createAccount,
+  deleteAccount,
 };

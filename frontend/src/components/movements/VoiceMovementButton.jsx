@@ -17,16 +17,13 @@ function VoiceMovementButton({ onTranscript }) {
     }
   }, [])
 
-  const handleToggle = () => {
+  const startListening = () => {
     if (!SpeechRecognition) {
       setError('Tu navegador no permite entrada por voz. Usa el campo de texto.')
       return
     }
 
-    if (isListening) {
-      recognitionRef.current?.stop()
-      return
-    }
+    if (isListening) return
 
     const recognition = new SpeechRecognition()
 
@@ -73,15 +70,52 @@ function VoiceMovementButton({ onTranscript }) {
       )
     }
 
-    recognition.onend = () => setIsListening(false)
+    recognition.onend = () => {
+      setIsListening(false)
+      recognitionRef.current = null
+    }
+
     recognitionRef.current = recognition
 
     try {
       recognition.start()
     } catch {
       setIsListening(false)
+      recognitionRef.current = null
       setError('No se pudo iniciar el micrófono. Inténtalo nuevamente.')
     }
+  }
+
+  const stopListening = () => {
+    if (!isListening) return
+    recognitionRef.current?.stop()
+  }
+
+  const handlePointerDown = (event) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return
+
+    event.preventDefault()
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+    startListening()
+  }
+
+  const handlePointerUp = (event) => {
+    event.preventDefault()
+    stopListening()
+  }
+
+  const handleKeyDown = (event) => {
+    if (!['Enter', ' '].includes(event.key) || event.repeat) return
+
+    event.preventDefault()
+    startListening()
+  }
+
+  const handleKeyUp = (event) => {
+    if (!['Enter', ' '].includes(event.key)) return
+
+    event.preventDefault()
+    stopListening()
   }
 
   const handleFallbackSubmit = (event) => {
@@ -98,27 +132,53 @@ function VoiceMovementButton({ onTranscript }) {
   }
 
   return (
-    <div className="voice-entry">
+    <div className="voice-entry voice-entry-floating">
       <button
         type="button"
-        className={
+        className={[
+          'voice-button',
+          'voice-button-floating',
+          isListening ? 'listening' : '',
+          !SpeechRecognition ? 'unavailable' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={stopListening}
+        onBlur={stopListening}
+        onKeyDown={handleKeyDown}
+        onKeyUp={handleKeyUp}
+        onContextMenu={(event) => event.preventDefault()}
+        aria-label={
           isListening
-            ? 'voice-button listening'
-            : SpeechRecognition
-              ? 'voice-button'
-              : 'voice-button unavailable'
+            ? 'Suelta para terminar la grabación'
+            : 'Mantén presionado para registrar por voz'
         }
-        onClick={handleToggle}
         aria-pressed={isListening}
+        title="Registrar por voz"
       >
-        <span aria-hidden="true">🎙️</span>
-        {isListening
-          ? 'Escuchando...'
-          : SpeechRecognition
-            ? 'Registrar por voz'
-            : 'Voz no disponible'}
+        <svg
+          className="voice-button-icon"
+          viewBox="0 0 24 24"
+          role="img"
+          aria-label="Micrófono"
+        >
+          <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3Z" />
+          <path d="M5 11a7 7 0 0 0 14 0" />
+          <path d="M12 18v3" />
+          <path d="M8 21h8" />
+        </svg>
+        <span className="voice-button-label">
+          {isListening
+            ? 'Suelta para terminar'
+            : SpeechRecognition
+              ? 'Registrar por voz'
+              : 'Voz no disponible'}
+        </span>
       </button>
-      <details className="voice-text-fallback">
+
+      <details className="voice-text-fallback voice-text-fallback-floating">
         <summary>Escribir la frase</summary>
         <form onSubmit={handleFallbackSubmit}>
           <input
@@ -133,7 +193,12 @@ function VoiceMovementButton({ onTranscript }) {
           </button>
         </form>
       </details>
-      {error && <p className="voice-entry-error">{error}</p>}
+
+      {error && (
+        <p className="voice-entry-error" role="status">
+          {error}
+        </p>
+      )}
     </div>
   )
 }
