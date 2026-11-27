@@ -1,75 +1,21 @@
 # Arquitectura de Controla+
 
-## 1. Tipo de arquitectura
-
-Controla+ utilizará una arquitectura de aplicación monolítica modular.
-
-Esto significa que tendremos un solo backend, pero cada función estará organizada en módulos independientes:
-
-- Finanzas.
-- Deudas.
-- Recordatorios.
-- Organización académica.
-- Metas y presupuestos.
-
-Esta arquitectura es adecuada para la primera versión porque es más sencilla de desarrollar, probar y mantener.
-
-## 2. Componentes principales
-
-### Frontend
-
-Será la interfaz visual creada con React. Permitirá:
-
-- Iniciar sesión.
-- Registrar ingresos y gastos.
-- Consultar movimientos.
-- Ver gráficos.
-- Administrar deudas.
-- Revisar tareas y recordatorios.
-
-### Backend
-
-Será creado con Node.js y Express. Se encargará de:
-
-- Recibir las solicitudes del frontend.
-- Validar los datos.
-- Aplicar las reglas del sistema.
-- Comunicarse con PostgreSQL.
-- Generar reportes.
-- Gestionar recordatorios.
-- Recibir mensajes de WhatsApp en una versión futura.
-
-### Base de datos
-
-PostgreSQL almacenará:
-
-- Usuarios.
-- Movimientos financieros.
-- Categorías.
-- Deudas.
-- Pagos.
-- Recordatorios.
-- Cursos.
-- Tareas.
-- Metas.
-
-### Integraciones externas
-
-En versiones posteriores se conectará con:
-
-- Google Sheets.
-- WhatsApp Cloud API.
-- Servicio de envío de correos o notificaciones.
-
-## 3. Flujo general
+Controla+ usa un monolito modular en Express, un frontend React compilado con Vite y un único PostgreSQL. Prisma implementa el acceso a datos y aplica migraciones SQL versionadas.
 
 ```mermaid
-flowchart TD
-    A[Usuario] --> B[Frontend React]
-    A --> C[WhatsApp]
-    B --> D[Backend Node.js y Express]
-    C --> E[Webhook de WhatsApp]
-    E --> D
-    D --> F[PostgreSQL]
-    D --> G[Google Sheets]
-    D --> H[Servicio de recordatorios]
+flowchart LR
+    U[Usuario] --> F[React y Vite]
+    F -->|HTTP JSON y JWT| A[API Express]
+    A --> M[Servicios y validadores]
+    M --> P[Prisma Client]
+    P -->|Rol de aplicación| D[PostgreSQL]
+    DBA[Operación autorizada] -->|Roles de migración o respaldo| D
+```
+
+El frontend contiene la sesión por pestaña, los formularios, el panel, los filtros, los reportes y la exportación. La captura por voz depende de la API de reconocimiento del navegador y prepara un borrador que la persona revisa antes de guardarlo.
+
+Express separa rutas, controladores, validadores y servicios. El middleware verifica un JWT y establece el usuario de cada solicitud. La API filtra por propietario. PostgreSQL garantiza integridad con claves compuestas, enums, unicidad y restricciones. Los roles de administración, migración, aplicación, respaldo y consulta académica se aprovisionan en la base dedicada.
+
+La configuración se inyecta por proceso. La suite reproduce la API real, el frontend compilado y PostgreSQL en loopback con bases temporales y credenciales aleatorias. Consulta las guías de [seguridad](seguridad.md), [roles](roles-y-permisos.md) y [recuperación](mantenimiento-y-recuperacion.md).
+
+El panel procesa el conjunto del usuario en React. Los filtros y agregados para los gráficos se recalculan cuando cambian sus entradas. La lista presenta las 1000 filas del escenario de aceptación y comparte instancias de formateo de fecha y moneda. El estado de datos permanece dentro del panel de la sesión activa. [Evidencias del perfilado y la aceptación](evidencias/05-rendimiento-final.md)

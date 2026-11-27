@@ -1,116 +1,25 @@
-# Controla+
+# Alcance de Controla+
 
-## 1. Descripción del proyecto
+Controla+ permite a cada usuario gestionar sus finanzas personales y consultar información de sus propios registros.
 
-Controla+ será un asistente personal para organizar las finanzas y actividades académicas de Johan.
+## Funciones implementadas
 
-La aplicación permitirá registrar ingresos, gastos, deudas, pagos, clases, tareas y exámenes. También generará reportes y recordatorios.
+- Registro, inicio de sesión, cierre de sesión y edición de perfil.
+- Alta, consulta y eliminación de cuentas vacías.
+- Registro, consulta, actualización y eliminación de ingresos y gastos. Cada alta o edición requiere una cuenta activa del mismo propietario.
+- Catálogos iniciales de categorías y métodos de pago por usuario.
+- Recordatorios mensuales de pago con edición, eliminación y avance del vencimiento al confirmar el pago.
+- Panel, búsqueda, filtros mensuales, gráficos, exportación a Excel y captura por voz con revisión en navegadores compatibles.
 
-## 2. Problema que se desea solucionar
+## Requisitos no funcionales
 
-Actualmente la información está repartida entre cuadernos, memoria, tarjetas, bancos y diferentes aplicaciones. Esto puede provocar:
+| Requisito | Criterio de verificación |
+|---|---|
+| Seguridad y aislamiento | JWT por sesión, bcrypt y límites de intentos. Verificar permisos efectivos y confirmar que los datos del usuario anterior desaparecen al cambiar de sesión. |
+| Integridad | Probar pertenencia y tipo de referencias, SQLSTATE de restricciones y conservación de movimientos históricos con cuenta nula en una actualización. |
+| Mantenibilidad | Ejecutar las migraciones versionadas desde cero y desde el esquema anterior. Reproducir lint, build y las pruebas en un PostgreSQL temporal. |
+| Recuperación | Crear una copia cifrada, restaurarla en una base vacía y verificar importes, conteos, restricciones y permisos. Los objetivos operativos son RPO de 24 h y RTO de 2 h. |
+| Rendimiento | Con 1000 movimientos propios, cada muestra de movimientos, cuentas y panel debe quedar dentro de 3000 ms. La medición del panel termina tras renderizar los 1000 elementos y transcurrir dos cuadros de animación. |
+| Entrega reproducible | Ejecutar los guiones DDL y DML con datos sintéticos y conservar modelo, documentación de permisos, procedimiento de recuperación y resultados en GitHub. |
 
-- Olvidar fechas de pago.
-- No saber cuánto dinero se tiene disponible.
-- No identificar en qué se gasta el dinero.
-- Perder el control de las deudas.
-- Olvidar tareas, clases o exámenes.
-- No tener un resumen mensual de la situación personal.
-
-## 3. Objetivo general
-
-Desarrollar una aplicación web que centralice la información financiera y académica, permitiendo consultarla y actualizarla desde un panel web y, posteriormente, desde WhatsApp.
-
-## 4. Usuarios
-
-### Usuario principal
-
-Johan, quien podrá administrar sus propios ingresos, gastos, deudas, pagos, clases, tareas y metas.
-
-## 5. Módulos principales
-
-### 5.1 Finanzas
-
-- Registrar ingresos.
-- Registrar gastos.
-- Clasificar movimientos por categoría.
-- Indicar el método de pago.
-- Consultar totales mensuales.
-- Calcular porcentajes por categoría.
-- Exportar información a Excel.
-
-### 5.2 Deudas y pagos
-
-- Registrar una deuda.
-- Registrar pagos realizados.
-- Consultar saldo pendiente.
-- Guardar fechas de vencimiento.
-- Mostrar el avance de cada deuda.
-
-### 5.3 Recordatorios
-
-- Recordar pagos.
-- Recordar exámenes.
-- Recordar tareas.
-- Recordar clases.
-- Configurar recordatorios repetitivos.
-
-### 5.4 Organización académica
-
-- Registrar cursos.
-- Registrar clases.
-- Registrar tareas.
-- Registrar exámenes.
-- Definir prioridades.
-- Marcar actividades como pendientes, en proceso o terminadas.
-
-### 5.5 Metas y presupuestos
-
-- Crear una meta de ahorro.
-- Definir un presupuesto mensual.
-- Consultar el avance de una meta.
-- Comparar el presupuesto planificado con el gasto real.
-
-## 6. Primera versión del sistema
-
-La primera versión incluirá:
-
-1. Registro de ingresos.
-2. Registro de gastos.
-3. Categorías.
-4. Métodos de pago.
-5. Resumen mensual.
-6. Porcentajes de gastos.
-7. Lista de movimientos.
-8. Exportación a Excel.
-
-## 7. Funciones futuras
-
-- Integración con WhatsApp.
-- Recordatorios automáticos por WhatsApp.
-- Interpretación de mensajes escritos de forma natural.
-- Registro de pagos de deudas desde WhatsApp.
-- Panel con gráficos avanzados.
-- Aplicación móvil.
-
-## 8. Fuera del alcance inicial
-
-En la primera versión no se incluirá:
-
-- Conexión directa con bancos.
-- Pagos automáticos.
-- Acceso a contraseñas bancarias.
-- Lectura automática de estados de cuenta.
-- Compra o venta de productos financieros.
-
-## 9. Tecnologías propuestas
-
-- Visual Studio Code.
-- Node.js.
-- Express.
-- React.
-- PostgreSQL.
-- Prisma.
-- Git y GitHub.
-- Google Sheets API.
-- Librería XLSX.
+El [informe técnico de entrega](entrega-academica.md) vincula los requerimientos con sus guiones y evidencias.

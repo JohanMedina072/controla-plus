@@ -10,6 +10,19 @@ El rol de ejecución es una identidad de servicio de Express. Las personas que u
 | `controla_backup` | Conexión, uso del esquema y lectura de objetos necesarios para `pg_dump`, incluidos los hashes y la historia de migraciones. Debe utilizarse con un canal y almacenamiento protegidos. |
 | `controla_academic` | Conexión y lectura de la vista `controla_academic_counts` con conteos por tipo de movimiento. Para las demostraciones académicas, asigna este grupo únicamente sobre datos sintéticos. |
 
+### Privilegios efectivos por objeto
+
+| Objeto | Aplicación | Respaldo | Académico |
+|---|---|---|---|
+| `User` | SELECT, INSERT, UPDATE | SELECT | — |
+| `Category`, `PaymentMethod` | SELECT, INSERT | SELECT | — |
+| `Account` | SELECT, INSERT, DELETE | SELECT | — |
+| `Movement`, `PaymentReminder` | SELECT, INSERT, UPDATE, DELETE | SELECT | — |
+| `_prisma_migrations` | — | SELECT | — |
+| `controla_academic_counts` | — | SELECT | SELECT |
+
+La matriz se comprobó con roles efectivos en PostgreSQL. El ensayo de restauración verificó la reaplicación de permisos sobre el destino. [Evidencia de roles](evidencias/03-integridad-y-permisos.md) · [Evidencia de recuperación](evidencias/04-mantenimiento-y-recuperacion.md)
+
 ## Aprovisionamiento y despliegue
 
 Con una conexión administrativa dedicada al entorno autorizado, ejecuta desde la raíz:

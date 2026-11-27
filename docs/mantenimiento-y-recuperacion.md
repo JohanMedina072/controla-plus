@@ -51,3 +51,7 @@ psql -X -d controla_restore_ensayo -v target_db=controla_restore_ensayo -f datab
 El ejecutor verifica la autenticidad antes de abrir la restauración y usa una transacción de `pg_restore`, sin comandos de limpieza de la base original. Descifra en un directorio temporal del usuario que se elimina al final. Usa un volumen temporal cifrado y restringido, y revisa artefactos temporales si el proceso termina por la fuerza. La copia carece de propietarios y ACL. Reaplica `roles.sql` y provisiona los LOGIN por el mecanismo autorizado.
 
 Consulta el [ensayo documentado](evidencias/04-mantenimiento-y-recuperacion.md).
+
+## Evidencia y continuidad operativa
+
+La suite aislada repite el ensayo de mantenimiento y recuperación junto con las pruebas de integridad. Conserva en un registro operativo los resultados de cada copia y de cada simulacro. Ante una ejecución incompleta, mide el tiempo transcurrido desde la última copia verificada e investiga su causa antes de cerrar la incidencia. Los resultados locales de la suite cubren la restauración de datos sintéticos y la reaplicación de permisos. La programación diaria, el almacenamiento externo y la conmutación de un servicio quedan a cargo del operador del entorno.

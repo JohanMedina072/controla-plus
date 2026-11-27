@@ -10,7 +10,9 @@ const backend = path.resolve(__dirname, "..");
 const host = "127.0.0.1";
 const integrityMigration = "20261023181837_harden_database_integrity";
 const ownerMigration = "20261127182000_enforce_movement_references";
-const browser = process.argv.includes("--browser");
+const benchmark = process.argv.includes("--performance");
+const profiling = process.argv.includes("--profile");
+const browser = profiling || benchmark || process.argv.includes("--browser");
 
 function pg(command) {
   const executable = process.platform === "win32" ? `${command}.exe` : command;
@@ -110,6 +112,7 @@ async function main() {
       "-c", "CREATE DATABASE controla_stage1_upgrade",
       "-c", "CREATE DATABASE controla_stage1_preflight",
       "-c", "CREATE DATABASE controla_restore_stage4 TEMPLATE template0",
+      "-c", "CREATE DATABASE controla_demo_etapa5 TEMPLATE template0",
     ], { env: { ...process.env, PGPASSWORD: password } });
 
     const clean = `postgresql://${username}:${password}@${host}:${port}/controla_stage1_clean`;
@@ -119,6 +122,8 @@ async function main() {
     preflight.pathname = "/controla_stage1_preflight";
     const restore = new URL(clean);
     restore.pathname = "/controla_restore_stage4";
+    const demo = new URL(clean);
+    demo.pathname = "/controla_demo_etapa5";
     const emptyDotenv = path.join(root, "empty.env");
     fs.writeFileSync(emptyDotenv, "");
     const env = {
@@ -129,6 +134,7 @@ async function main() {
       CONTROLA_TEST_UPGRADE_URL: upgrade.href,
       CONTROLA_TEST_PREFLIGHT_URL: preflight.href,
       CONTROLA_TEST_RESTORE_URL: restore.href,
+      CONTROLA_TEST_DEMO_URL: demo.href,
       JWT_SECRET: randomBytes(32).toString("hex"),
       JWT_EXPIRES_IN: "1h",
     };
@@ -154,6 +160,7 @@ async function main() {
       "tests/api.integration.test.js", "tests/upgrade.integration.test.js",
       "tests/preflight.integration.test.js", "tests/roles.integration.test.js",
       "tests/recovery.integration.test.js",
+      "tests/academic.integration.test.js",
     ];
     if (browser) {
       const frontend = path.resolve(backend, "../frontend");
@@ -162,11 +169,12 @@ async function main() {
         path.join(frontend, "node_modules/vite/bin/vite.js"), "build",
         "--outDir", env.CONTROLA_TEST_FRONTEND,
       ], { cwd: frontend, env: { ...env, NODE_ENV: "production", VITE_API_URL: "/api" } });
-      tests.push("tests/session.browser.test.js");
+      tests.push("tests/session.browser.test.js", "tests/dashboard.browser.test.js");
     }
+    if (benchmark) tests.push("tests/performance.browser.test.js");
     run(process.execPath, [
       "--test", "--test-concurrency=1", "--test-reporter=spec", "--test-timeout=45000",
-      ...tests,
+      ...(profiling ? ["tests/profile-panel.browser.test.js"] : tests),
     ], { env, stdio: "inherit" });
   } catch (error) {
     if (fs.existsSync(postgresLog)) console.error(fs.readFileSync(postgresLog, "utf8"));

@@ -1,5 +1,7 @@
 # Etapa 5. Rendimiento con 1000 movimientos
 
+Este registro conserva la ejecución inicial. Consulta el [perfilado y la aceptación posterior](05-rendimiento-final.md) para ver el resultado final de la etapa.
+
 **Estado: bloqueada.** Dos de siete mediciones del panel superaron el límite de 3000 ms. Las consultas HTTP de movimientos y cuentas cumplieron el objetivo en esta ejecución local.
 
 ## Método
