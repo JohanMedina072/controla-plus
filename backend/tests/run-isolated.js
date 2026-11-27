@@ -109,6 +109,7 @@ async function main() {
       "-v", "ON_ERROR_STOP=1", "-c", "CREATE DATABASE controla_stage1_clean",
       "-c", "CREATE DATABASE controla_stage1_upgrade",
       "-c", "CREATE DATABASE controla_stage1_preflight",
+      "-c", "CREATE DATABASE controla_restore_stage4 TEMPLATE template0",
     ], { env: { ...process.env, PGPASSWORD: password } });
 
     const clean = `postgresql://${username}:${password}@${host}:${port}/controla_stage1_clean`;
@@ -116,6 +117,8 @@ async function main() {
     upgrade.pathname = "/controla_stage1_upgrade";
     const preflight = new URL(clean);
     preflight.pathname = "/controla_stage1_preflight";
+    const restore = new URL(clean);
+    restore.pathname = "/controla_restore_stage4";
     const emptyDotenv = path.join(root, "empty.env");
     fs.writeFileSync(emptyDotenv, "");
     const env = {
@@ -125,6 +128,7 @@ async function main() {
       DATABASE_URL: clean,
       CONTROLA_TEST_UPGRADE_URL: upgrade.href,
       CONTROLA_TEST_PREFLIGHT_URL: preflight.href,
+      CONTROLA_TEST_RESTORE_URL: restore.href,
       JWT_SECRET: randomBytes(32).toString("hex"),
       JWT_EXPIRES_IN: "1h",
     };
@@ -149,6 +153,7 @@ async function main() {
     const tests = [
       "tests/api.integration.test.js", "tests/upgrade.integration.test.js",
       "tests/preflight.integration.test.js", "tests/roles.integration.test.js",
+      "tests/recovery.integration.test.js",
     ];
     if (browser) {
       const frontend = path.resolve(backend, "../frontend");
