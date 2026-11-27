@@ -33,4 +33,8 @@ npm.cmd --prefix frontend run lint
 npm.cmd --prefix frontend run build
 ```
 
-Lint y build comprueban el código fuente y la compilación. El comportamiento del panel en el navegador, los roles PostgreSQL, la recuperación y el rendimiento con 1000 movimientos se verifican en etapas posteriores.
+Lint y build comprueban el código fuente y la compilación.
+
+Para probar el cambio de sesión en navegador, instala las dependencias de ambos proyectos y ejecuta `npx playwright install chromium` desde `backend`. Después, desde la raíz, ejecuta `npm.cmd --prefix backend test -- --browser`. Si ya tienes Microsoft Edge, puedes usarlo con `CONTROLA_BROWSER_CHANNEL=msedge`.
+
+Consulta la [configuración de seguridad y el procedimiento para contraseñas heredadas](docs/seguridad.md).

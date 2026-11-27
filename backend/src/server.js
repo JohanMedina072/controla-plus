@@ -12,7 +12,7 @@ const catalogRoutes = require("./routes/catalog.routes");
 const accountRoutes = require("./routes/account.routes");
 const reminderRoutes = require("./routes/reminder.routes");
 const { requireAuth } = require("./middlewares/auth.middleware");
-const { assertAppConfig } = require("./config/app");
+const { assertAppConfig, getCorsOrigins } = require("./config/app");
 const {
   notFoundHandler,
   errorHandler,
@@ -22,7 +22,12 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middlewares
-app.use(cors());
+app.disable("x-powered-by");
+app.use(cors({ origin: getCorsOrigins() }));
+app.use("/api", (req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
 app.use(express.json());
 
 // Rutas

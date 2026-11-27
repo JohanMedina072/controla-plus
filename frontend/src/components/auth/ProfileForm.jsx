@@ -54,7 +54,7 @@ function ProfileForm({ user, onCancel, onUpdated }) {
         newPassword: formData.newPassword || undefined,
       })
 
-      onUpdated(updatedUser)
+      onUpdated(updatedUser, Boolean(formData.newPassword))
     } catch (profileError) {
       setError(profileError.message || 'No se pudo actualizar el perfil.')
     } finally {

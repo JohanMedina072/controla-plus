@@ -1,8 +1,10 @@
 const assert = require("node:assert/strict");
+const { execFileSync } = require("node:child_process");
 const { randomBytes, randomUUID } = require("node:crypto");
 const { after, before, test } = require("node:test");
 const bcrypt = require("bcryptjs");
 const { databaseUrl } = require("./test-database");
+const { migrateLegacyPasswords } = require("../scripts/legacy-passwords");
 
 databaseUrl("DATABASE_URL", "controla_stage1_clean");
 const app = require("../src/server");
@@ -26,6 +28,7 @@ async function api(method, route, { token, payload, status = 200 } = {}) {
   const result = await response.json();
   assert.equal(response.status, status, `${method} ${route} devolvió un estado inesperado`);
   assert.equal(result.ok, status < 400);
+  assert.equal(response.headers.get("cache-control"), "no-store");
   return result.data;
 }
 
@@ -112,21 +115,33 @@ test("registro, inicio de sesión y perfil devuelven solo el usuario público", 
   assert.equal(user.id, alice.user.id);
 });
 
-test("un inicio de sesión correcto convierte una contraseña heredada sintética en bcrypt", async () => {
+test("la API rechaza texto plano hasta que el procedimiento autorizado lo convierte", async () => {
   const password = randomBytes(24).toString("base64url");
   const legacy = await prisma.user.create({
     data: { name: "Usuario heredado", email: `${randomUUID()}@example.test`, passwordHash: password },
   });
   await api("POST", "/auth/login", {
-    payload: { email: legacy.email, password: randomBytes(24).toString("base64url") }, status: 401,
+    payload: { email: legacy.email, password }, status: 401,
   });
-  const afterFailure = await prisma.user.findUniqueOrThrow({ where: { id: legacy.id } });
-  assert.ok(afterFailure.passwordHash === password, "Un intento inválido no debe modificar el valor");
+  const scan = await migrateLegacyPasswords(prisma);
+  assert.deepEqual(scan, { legacy: 1, convertible: 1, needsReview: 0, migrated: 0, changedDuringRun: 0 });
 
+  const blocked = await prisma.user.create({
+    data: { name: "Caso de revisión", email: randomUUID() + "@example.test", passwordHash: randomBytes(40).toString("hex") },
+  });
+  const review = await migrateLegacyPasswords(prisma, { apply: true });
+  assert.equal(review.needsReview, 1);
+  assert.equal(review.migrated, 0);
+  const beforeMigration = await prisma.user.findUniqueOrThrow({ where: { id: legacy.id } });
+  assert.ok(beforeMigration.passwordHash === password);
+  await prisma.user.delete({ where: { id: blocked.id } });
+
+  const applied = await migrateLegacyPasswords(prisma, { apply: true });
+  assert.equal(applied.migrated, 1);
+  assert.equal((await migrateLegacyPasswords(prisma)).legacy, 0);
+  const saved = await prisma.user.findUniqueOrThrow({ where: { id: legacy.id } });
+  assert.ok(await bcrypt.compare(password, saved.passwordHash));
   await api("POST", "/auth/login", { payload: { email: legacy.email, password } });
-  const afterLogin = await prisma.user.findUniqueOrThrow({ where: { id: legacy.id } });
-  assert.ok(afterLogin.passwordHash !== password, "La contraseña de prueba debe quedar hasheada");
-  assert.ok(await bcrypt.compare(password, afterLogin.passwordHash));
 });
 
 test("el CRUD de movimientos actualiza el saldo y protege cuentas con historial", async () => {
@@ -262,4 +277,64 @@ test("PostgreSQL aplica CHECK, unicidad y claves foráneas del esquema actual", 
   for (const [code, label, statement] of checks) {
     await assert.rejects(async () => statement(), (error) => error.meta?.code === code, label);
   }
+});
+
+test("el cambio de contraseña revoca ambas sesiones y aplica el límite de 72 bytes", async () => {
+  const credentials = { email: alice.email, password: alice.password };
+  const otherSession = await api("POST", "/auth/login", { payload: credentials });
+  assert.ok(otherSession.token !== alice.token);
+  const profile = { name: alice.user.name, email: alice.email, currentPassword: alice.password };
+  await api("PATCH", "/auth/profile", {
+    token: alice.token, payload: { ...profile, newPassword: "á".repeat(37) }, status: 400,
+  });
+  const newPassword = randomBytes(24).toString("base64url");
+  await api("PATCH", "/auth/profile", { token: alice.token, payload: { ...profile, newPassword } });
+  await api("GET", "/auth/me", { token: alice.token, status: 401 });
+  await api("GET", "/auth/me", { token: otherSession.token, status: 401 });
+  await api("POST", "/auth/login", { payload: credentials, status: 401 });
+  const next = await api("POST", "/auth/login", { payload: { email: alice.email, password: newPassword } });
+  await api("GET", "/auth/me", { token: next.token });
+});
+
+test("una sesión emitida con vigencia corta expira", async () => {
+  const previous = process.env.JWT_EXPIRES_IN;
+  process.env.JWT_EXPIRES_IN = "1s";
+  let session;
+  try {
+    session = await api("POST", "/auth/login", { payload: { email: bob.email, password: bob.password } });
+  } finally {
+    process.env.JWT_EXPIRES_IN = previous;
+  }
+  await new Promise((resolve) => setTimeout(resolve, 1100));
+  await api("GET", "/auth/me", { token: session.token, status: 401 });
+});
+
+test("el seed sintético exige activación explícita y se puede repetir", async () => {
+  const DEMO_EMAIL = randomUUID() + "@example.test";
+  const DEMO_PASSWORD = randomBytes(24).toString("base64url");
+  const run = (DEMO_SEED) => execFileSync(process.execPath, ["prisma/seed.js"], {
+    env: { ...process.env, DEMO_SEED, DEMO_EMAIL, DEMO_PASSWORD },
+    stdio: "pipe", timeout: 10_000,
+  });
+  assert.throws(() => run("0"), (error) => error.status === 1);
+  assert.equal(await prisma.user.count({ where: { email: DEMO_EMAIL } }), 0);
+  run("1");
+  run("1");
+  const demo = await prisma.user.findUniqueOrThrow({ where: { email: DEMO_EMAIL } });
+  assert.ok(await bcrypt.compare(DEMO_PASSWORD, demo.passwordHash));
+  assert.equal(await prisma.account.count({ where: { userId: demo.id } }), 1);
+});
+
+test("el inicio de sesión limita intentos y envía Retry-After", async () => {
+  let response;
+  for (let attempt = 0; attempt <= 10; attempt += 1) {
+    response = await fetch(baseUrl + "/auth/login", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+    });
+    await response.text();
+    if (response.status === 429) break;
+    assert.equal(response.status, 400);
+  }
+  assert.equal(response.status, 429);
+  assert.ok(Number(response.headers.get("retry-after")) > 0);
 });

@@ -9,6 +9,7 @@ const { prismaCli } = require("./test-database");
 const backend = path.resolve(__dirname, "..");
 const host = "127.0.0.1";
 const integrityMigration = "20261023181837_harden_database_integrity";
+const browser = process.argv.includes("--browser");
 
 function pg(command) {
   const executable = process.platform === "win32" ? `${command}.exe` : command;
@@ -133,10 +134,20 @@ async function main() {
       env: { ...env, DATABASE_URL: upgrade.href },
     });
 
+    const tests = ["tests/api.integration.test.js", "tests/upgrade.integration.test.js"];
+    if (browser) {
+      const frontend = path.resolve(backend, "../frontend");
+      env.CONTROLA_TEST_FRONTEND = path.join(root, "frontend");
+      run(process.execPath, [
+        path.join(frontend, "node_modules/vite/bin/vite.js"), "build",
+        "--outDir", env.CONTROLA_TEST_FRONTEND,
+      ], { cwd: frontend, env: { ...env, NODE_ENV: "production", VITE_API_URL: "/api" } });
+      tests.push("tests/session.browser.test.js");
+    }
     run(process.execPath, [
-      "--test", "--test-concurrency=1", "--test-reporter=spec",
-      "tests/api.integration.test.js", "tests/upgrade.integration.test.js",
-    ], { env });
+      "--test", "--test-concurrency=1", "--test-reporter=spec", "--test-timeout=45000",
+      ...tests,
+    ], { env, stdio: "inherit" });
   } catch (error) {
     if (fs.existsSync(postgresLog)) console.error(fs.readFileSync(postgresLog, "utf8"));
     throw error;

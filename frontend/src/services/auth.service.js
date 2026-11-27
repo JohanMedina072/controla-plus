@@ -2,6 +2,7 @@ import { AUTH_URL } from './api'
 import { requestJson } from './http'
 
 const jsonOptions = (data) => ({
+  authenticated: false,
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
