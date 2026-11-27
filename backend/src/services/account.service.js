@@ -88,20 +88,25 @@ const deleteAccount = async ({ userId, accountId }) => {
     throw error;
   }
 
-  if (account._count.movements > 0) {
+  const cannotDelete = () => {
     const error = new Error(
       'No puedes eliminar una cuenta que tiene movimientos asociados. Conserva la cuenta para mantener el historial.',
     );
     error.statusCode = 409;
     error.code = 'ACCOUNT_HAS_MOVEMENTS';
-    throw error;
+    return error;
+  };
+
+  if (account._count.movements > 0) {
+    throw cannotDelete();
   }
 
-  await prisma.account.delete({
-    where: {
-      id: account.id,
-    },
-  });
+  try {
+    await prisma.account.delete({ where: { id: account.id, userId } });
+  } catch (error) {
+    if (error.code === "P2003") throw cannotDelete();
+    throw error;
+  }
 };
 
 module.exports = {

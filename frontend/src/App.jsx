@@ -49,6 +49,30 @@ import {
 
 function App() {
   const [auth, setAuth] = useState(() => getStoredAuth())
+
+  useEffect(() => {
+    const handleAuthExpired = (event) => {
+      setAuth((current) => current?.token === event.detail ? null : current)
+    }
+
+    window.addEventListener('controla:auth-expired', handleAuthExpired)
+    return () => window.removeEventListener('controla:auth-expired', handleAuthExpired)
+  }, [])
+
+  const updateSession = (session) => {
+    if (session) saveStoredAuth(session)
+    else clearStoredAuth()
+    setAuth(session)
+  }
+
+  if (!auth) return <AuthPage onAuthenticated={updateSession} />
+
+  return (
+    <Dashboard key={auth.token} auth={auth} onSessionChange={updateSession} />
+  )
+}
+
+function Dashboard({ auth, onSessionChange }) {
   const [movements, setMovements] = useState([])
   const [categories, setCategories] = useState([])
   const [paymentMethods, setPaymentMethods] = useState([])
@@ -100,17 +124,7 @@ function App() {
   const voiceReviewRef = useRef(null)
 
   useEffect(() => {
-    const handleAuthExpired = () => setAuth(null)
-
-    window.addEventListener('controla:auth-expired', handleAuthExpired)
-
-    return () => {
-      window.removeEventListener('controla:auth-expired', handleAuthExpired)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!auth) return
+    let active = true
 
     const loadData = async () => {
       try {
@@ -133,6 +147,7 @@ function App() {
           getReminders(),
         ])
 
+        if (!active) return
         setMovements(movementsResult)
         setCategories(catalogResult.categories)
         setPaymentMethods(catalogResult.paymentMethods)
@@ -149,18 +164,22 @@ function App() {
           paymentMethodId: catalogResult.paymentMethods[0]?.id || '',
         }))
       } catch (error) {
+        if (!active) return
         setError(error.message)
         setAccountError(error.message)
         setReminderError(error.message)
       } finally {
-        setLoading(false)
-        setAccountsLoading(false)
-        setRemindersLoading(false)
+        if (active) {
+          setLoading(false)
+          setAccountsLoading(false)
+          setRemindersLoading(false)
+        }
       }
     }
 
     loadData()
-  }, [auth])
+    return () => { active = false }
+  }, [])
 
   useEffect(() => {
     if (!voiceDraft) return
@@ -698,14 +717,8 @@ const monthlyTotals = useMemo(() => {
     }
   }
 
-  const handleAuthenticated = (session) => {
-    saveStoredAuth(session)
-    setAuth(session)
-  }
-
   const handleLogout = () => {
-    clearStoredAuth()
-    setAuth(null)
+    onSessionChange(null)
   }
 
   const handleProfileOpen = () => {
@@ -718,14 +731,14 @@ const monthlyTotals = useMemo(() => {
     setIsProfileOpen(false)
   }
 
-  const handleProfileUpdated = (updatedUser) => {
-    const updatedAuth = {
-      ...auth,
-      user: updatedUser,
+  const handleProfileUpdated = (updatedUser, passwordChanged) => {
+    if (getStoredAuth()?.token !== auth.token) return
+    if (passwordChanged) {
+      handleLogout()
+      return
     }
 
-    saveStoredAuth(updatedAuth)
-    setAuth(updatedAuth)
+    onSessionChange({ ...auth, user: updatedUser })
     setIsProfileOpen(false)
     setProfileMessage('Perfil actualizado correctamente.')
   }
@@ -845,10 +858,6 @@ const monthlyTotals = useMemo(() => {
 
     return () => window.cancelAnimationFrame(frame)
   }, [isReminderFormOpen, editingReminderId])
-
-  if (!auth) {
-    return <AuthPage onAuthenticated={handleAuthenticated} />
-  }
 
   return (
     <main className="app-shell">

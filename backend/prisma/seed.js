@@ -1,95 +1,45 @@
-const { PrismaClient } = require("@prisma/client");
+require("dotenv").config({ quiet: true });
 const bcrypt = require("bcryptjs");
+const { hashPassword, isBcryptHash, validBcryptLength } = require("../src/security/passwords");
+const { ensureDefaultCatalog } = require("../src/services/auth.service");
 
-const prisma = new PrismaClient();
+const name = "Demostración Controla+";
 
 async function main() {
-  const user = await prisma.user.upsert({
-    where: {
-      email: "johan@example.com",
-    },
-    update: {},
-    create: {
-      name: "Johan",
-      email: "johan@example.com",
-      passwordHash: bcrypt.hashSync("demo-password", 12),
-    },
-  });
-
-  await prisma.account.upsert({
-    where: {
-      name_userId: {
-        name: "Cuenta de emergencia",
-        userId: user.id,
-      },
-    },
-    update: {},
-    create: {
-      name: "Cuenta de emergencia",
-      initialBalance: "200.00",
-      userId: user.id,
-    },
-  });
-
-  const categories = [
-    { name: "Comida", type: "EXPENSE" },
-    { name: "Transporte", type: "EXPENSE" },
-    { name: "Salud", type: "EXPENSE" },
-    { name: "Estudios", type: "EXPENSE" },
-    { name: "Mudanzas", type: "INCOME" },
-    { name: "taxi", type: "INCOME" },
-    { name: "Marketplace", type: "INCOME" },
-    { name: "Otros", type: "EXPENSE" },
-  ];
-
-  for (const category of categories) {
-    await prisma.category.upsert({
-      where: {
-        name_userId: {
-          name: category.name,
-          userId: user.id,
-        },
-      },
-      update: {
-        type: category.type,
-      },
-      create: {
-        name: category.name,
-        type: category.type,
-        userId: user.id,
-      },
-    });
+  const email = process.env.DEMO_EMAIL?.trim().toLowerCase();
+  const password = process.env.DEMO_PASSWORD;
+  if (!["development", "test"].includes(process.env.NODE_ENV) || process.env.DEMO_SEED !== "1"
+    || !/^[^\s@]+@example\.test$/.test(email ?? "")
+    || !password || password.length < 16 || !validBcryptLength(password)) {
+    throw new Error("Habilita el seed en development o test, con DEMO_EMAIL en example.test y DEMO_PASSWORD válido.");
   }
-
-  const paymentMethods = ["Efectivo", "Yape", "Tarjeta BCP", "Tarjeta IO"];
-
-  for (const methodName of paymentMethods) {
-    const existingMethod = await prisma.paymentMethod.findFirst({
-      where: {
-        name: methodName,
-        userId: user.id,
-      },
-    });
-
-    if (!existingMethod) {
-      await prisma.paymentMethod.create({
-        data: {
-          name: methodName,
-          userId: user.id,
-        },
+  const prisma = require("../src/config/prisma");
+  try {
+    const passwordHash = await hashPassword(password);
+    await prisma.$transaction(async (transaction) => {
+      const user = await transaction.user.upsert({
+        where: { email },
+        create: { name, email, passwordHash },
+        update: {},
       });
-    }
+      if (user.name !== name || !isBcryptHash(user.passwordHash)
+        || !await bcrypt.compare(password, user.passwordHash)) {
+        throw new Error("El correo ya está ocupado. Configura un correo sintético distinto.");
+      }
+      await ensureDefaultCatalog(transaction, user.id);
+      await transaction.account.upsert({
+        where: { name_userId: { name: "Cuenta de demostración", userId: user.id } },
+        create: { name: "Cuenta de demostración", userId: user.id, initialBalance: "200.00" },
+        update: {},
+      });
+    });
+    console.log("Datos sintéticos de demostración preparados.");
+  } finally {
+    await prisma.$disconnect();
   }
-
-  console.log("Datos iniciales creados correctamente");
-  console.log(`Usuario creado: ${user.email}`);
 }
 
-main()
-  .catch((error) => {
-    console.error("Error al crear datos iniciales:", error);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+main().catch((error) => {
+  console.error(error.code ? "No se pudo preparar la demostración." : error.message);
+  process.exitCode = 1;
+});

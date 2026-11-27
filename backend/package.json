@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node tests/run-isolated.js",
     "dev": "nodemon src/server.js",
     "start": "node src/server.js"
   },
@@ -17,10 +17,12 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.5",
     "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
     "nodemon": "^3.1.14",
+    "playwright": "^1.65.1",
     "prisma": "^6.19.3"
   }
 }

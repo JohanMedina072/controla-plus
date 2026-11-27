@@ -1,0 +1,64 @@
+Controla+ | Evidencia técnica de la Etapa 1
+Fecha de ejecución: 27 de noviembre de 2026
+Rama: feature/database-finalization
+Commit: 47f2b2ec83a5be9761ebc08fbf6bb1cfca5fcd4f
+Base de la rama: 1f6d584676b7739dc20406c7a806e026f470988d
+
+Entorno y metodología
+Windows, Node.js 22.19.0, npm 10.9.3, PostgreSQL 18.3, Prisma 6.19.3 y Vite 8.3.0.
+Se probó la API Express real con node:test, solicitudes HTTP locales y consultas sobre PostgreSQL.
+Se inicializó un clúster temporal con SCRAM, credenciales generadas y escucha en 127.0.0.1.
+La ejecución exitosa se inició con una DATABASE_URL ambiental de prueba deliberadamente inválida.
+El ejecutor la reemplazó y utilizó las dos bases del clúster temporal. Se usaron datos sintéticos.
+
+Instalación y verificación de frontend
+npm ci en backend y frontend: código de salida 0 en ambos.
+npm --prefix frontend run lint: código de salida 0.
+npm --prefix frontend run build: código de salida 0, 626 módulos transformados.
+Vite informó un paquete JavaScript de 945,46 kB minificado (288,69 kB gzip) y emitió un aviso de tamaño.
+El tiempo de compilación informado por Vite fue 776 ms. No corresponde al tiempo de respuesta de la aplicación.
+
+Migraciones e integridad
+Instalación limpia: Prisma aplicó las cinco migraciones del repositorio en controla_stage1_clean.
+Actualización: se aplicaron cuatro migraciones en controla_stage1_upgrade, se cargaron fixtures y se aplicó la quinta.
+Se compararon dos movimientos y un recordatorio antes y después, incluidos sus IDs, importes, fechas y relaciones.
+Un movimiento histórico conservó accountId = NULL y el otro conservó la cuenta asignada.
+Se comprobó la presencia de los índices Movement_userId_date_idx, Movement_accountId_date_idx
+y PaymentReminder_userId_nextDueDate_idx después de actualizar.
+La suite verificó los SQLSTATE 23514 (CHECK), 23505 (unicidad) y 23503 (clave foránea).
+
+Extracto de la salida real de npm --prefix backend test
+✔ la API y la conexión responden y las rutas privadas exigen sesión (760.268ms)
+✔ registro, inicio de sesión y perfil devuelven solo el usuario público (566.4529ms)
+✔ un inicio de sesión correcto convierte una contraseña heredada sintética en bcrypt (546.6455ms)
+✔ el CRUD de movimientos actualiza el saldo y protege cuentas con historial (94.1464ms)
+✔ el propietario puede eliminar una cuenta sin movimientos (18.3244ms)
+✔ dos usuarios conservan movimientos, catálogos y cuentas separados en la API (53.9615ms)
+✔ la API exige cuenta propia activa y rechaza referencias incompatibles en altas y ediciones (77.6607ms)
+✔ recordatorios de pago conservan su propietario y funcionan al cierre de mes (62.2656ms)
+✔ PostgreSQL aplica CHECK, unicidad y claves foráneas del esquema actual (18.2951ms)
+✔ actualizar desde las cuatro migraciones previas conserva los movimientos históricos (2017.8777ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6588.2875
+Resultado del comando: código de salida 0.
+El servidor PostgreSQL temporal se detuvo y el ejecutor eliminó su directorio de pruebas.
+
+Límites de la evidencia
+El aislamiento verificado corresponde a la API. Quedan pendientes el cambio de cuenta en el navegador,
+los roles y permisos de PostgreSQL, las restricciones entre propietarios al escribir directamente por SQL,
+la restauración de respaldos y el rendimiento con 1000 movimientos. Tampoco se ensayó una actualización
+con duplicados o filas que violen los CHECK. La prueba de actualización usó fixtures compatibles.
+
+Reproducción desde la raíz del repositorio en PowerShell
+$env:PG_BINDIR = 'C:\Program Files\PostgreSQL\18\bin'
+npm.cmd --prefix backend ci
+npm.cmd --prefix backend test
+npm.cmd --prefix frontend ci
+npm.cmd --prefix frontend run lint
+npm.cmd --prefix frontend run build

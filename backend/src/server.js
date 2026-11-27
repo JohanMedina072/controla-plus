@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
-require("dotenv").config();
+if (require.main === module) {
+  require("dotenv").config();
+}
 
 const healthRoutes = require("./routes/health.routes");
 const databaseRoutes = require("./routes/database.routes");
@@ -10,7 +12,7 @@ const catalogRoutes = require("./routes/catalog.routes");
 const accountRoutes = require("./routes/account.routes");
 const reminderRoutes = require("./routes/reminder.routes");
 const { requireAuth } = require("./middlewares/auth.middleware");
-const { assertAppConfig } = require("./config/app");
+const { assertAppConfig, getCorsOrigins } = require("./config/app");
 const {
   notFoundHandler,
   errorHandler,
@@ -20,7 +22,12 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middlewares
-app.use(cors());
+app.disable("x-powered-by");
+app.use(cors({ origin: getCorsOrigins() }));
+app.use("/api", (req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
 app.use(express.json());
 
 // Rutas
@@ -35,14 +42,17 @@ app.use("/api/reminders", requireAuth, reminderRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-// Iniciar servidor
-try {
-  assertAppConfig();
+if (require.main === module) {
+  try {
+    assertAppConfig();
 
-  app.listen(PORT, () => {
-    console.log(`Servidor ejecutándose en http://localhost:${PORT}`);
-  });
-} catch (error) {
-  console.error(`No se pudo iniciar el servidor: ${error.message}`);
-  process.exit(1);
+    app.listen(PORT, () => {
+      console.log(`Servidor ejecutándose en http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error(`No se pudo iniciar el servidor: ${error.message}`);
+    process.exit(1);
+  }
 }
+
+module.exports = app;

@@ -14,8 +14,9 @@ export const requestJson = async (
   fallbackMessage = 'No se pudo completar la solicitud',
 ) => {
   let response
-  const headers = new Headers(options.headers || {})
-  const token = getStoredToken()
+  const { authenticated = true, ...fetchOptions } = options
+  const headers = new Headers(fetchOptions.headers || {})
+  const token = authenticated ? getStoredToken() : ''
 
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`)
@@ -23,13 +24,18 @@ export const requestJson = async (
 
   try {
     response = await fetch(url, {
-      ...options,
+      ...fetchOptions,
       headers,
     })
   } catch {
     throw new ApiError(
       'No se pudo conectar con el servidor. Verifica que el backend esté ejecutándose.',
     )
+  }
+
+  if (response.status === 401 && token && getStoredToken() === token) {
+    clearStoredAuth()
+    window.dispatchEvent(new CustomEvent('controla:auth-expired', { detail: token }))
   }
 
   const rawBody = await response.text()
@@ -51,14 +57,6 @@ export const requestJson = async (
   }
 
   if (!response.ok) {
-    if (response.status === 401) {
-      clearStoredAuth()
-
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('controla:auth-expired'))
-      }
-    }
-
     throw new ApiError(
       result?.message || fallbackMessage,
       response.status,

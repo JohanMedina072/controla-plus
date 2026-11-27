@@ -1,3 +1,5 @@
+const { validBcryptLength } = require("../security/passwords");
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_NAME_LENGTH = 80;
 const MAX_EMAIL_LENGTH = 160;
@@ -31,8 +33,8 @@ const validateRegisterPayload = (payload = {}) => {
     return `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres`;
   }
 
-  if (password.length > 128) {
-    return "La contraseña no puede superar 128 caracteres";
+  if (!validBcryptLength(password)) {
+    return "La contraseña no puede superar 72 bytes en UTF-8";
   }
 
   return null;
@@ -85,8 +87,8 @@ const validateProfilePayload = (payload = {}) => {
       return `La nueva contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres`;
     }
 
-    if (newPassword.length > 128) {
-      return "La nueva contraseña no puede superar 128 caracteres";
+    if (!validBcryptLength(newPassword)) {
+      return "La nueva contraseña no puede superar 72 bytes en UTF-8";
     }
   }
 

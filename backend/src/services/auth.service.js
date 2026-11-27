@@ -1,10 +1,9 @@
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+const { randomBytes } = require("node:crypto");
 const prisma = require("../config/prisma");
 const AppError = require("../errors/app.error");
-const { getJwtExpiresIn, getJwtSecret } = require("../config/app");
-
-const PASSWORD_SALT_ROUNDS = 12;
+const { isBcryptHash, hashPassword } = require("../security/passwords");
+const { signSession } = require("../security/session");
 
 const DEFAULT_CATEGORIES = [
   { name: "Comida", type: "EXPENSE" },
@@ -32,19 +31,8 @@ const toPublicUser = (user) => ({
   email: user.email,
 });
 
-const createToken = (user) =>
-  jwt.sign(
-    {
-      sub: user.id,
-    },
-    getJwtSecret(),
-    {
-      expiresIn: getJwtExpiresIn(),
-    },
-  );
-
 const createSession = (user) => ({
-  token: createToken(user),
+  token: signSession(user),
   user: toPublicUser(user),
 });
 
@@ -57,32 +45,13 @@ const ensureDefaultCatalog = async (database, userId) => {
     skipDuplicates: true,
   });
 
-  for (const name of DEFAULT_PAYMENT_METHODS) {
-    const existingMethod = await database.paymentMethod.findFirst({
-      where: {
-        name,
-        userId,
-      },
-    });
-
-    if (!existingMethod) {
-      await database.paymentMethod.create({
-        data: {
-          name,
-          userId,
-        },
-      });
-    }
-  }
+  await database.paymentMethod.createMany({
+    data: DEFAULT_PAYMENT_METHODS.map((name) => ({ name, userId })),
+    skipDuplicates: true,
+  });
 };
 
-const isBcryptHash = (value) =>
-  typeof value === "string" && /^\$2[aby]\$\d{2}\$/.test(value);
-
-const comparePassword = async (password, passwordHash) =>
-  isBcryptHash(passwordHash)
-    ? bcrypt.compare(password, passwordHash)
-    : password === passwordHash;
+const dummyPasswordHash = hashPassword(randomBytes(32).toString("base64url"));
 
 const register = async ({ name, email, password }) => {
   const normalizedEmail = normalizeEmail(email);
@@ -98,7 +67,7 @@ const register = async ({ name, email, password }) => {
     );
   }
 
-  const passwordHash = await bcrypt.hash(password, PASSWORD_SALT_ROUNDS);
+  const passwordHash = await hashPassword(password);
 
   const user = await prisma.$transaction(async (transaction) => {
     const createdUser = await transaction.user.create({
@@ -123,33 +92,16 @@ const login = async ({ email, password }) => {
     where: { email: normalizedEmail },
   });
 
-  if (!user) {
+  const hasHash = user && isBcryptHash(user.passwordHash);
+  const passwordMatches = await bcrypt.compare(
+    password, hasHash ? user.passwordHash : await dummyPasswordHash,
+  );
+  if (!hasHash || !passwordMatches) {
     throw new AppError(
       "El correo o la contraseña son incorrectos",
       401,
       "INVALID_CREDENTIALS",
     );
-  }
-
-  const passwordMatches = await comparePassword(password, user.passwordHash);
-
-  if (!passwordMatches) {
-    throw new AppError(
-      "El correo o la contraseña son incorrectos",
-      401,
-      "INVALID_CREDENTIALS",
-    );
-  }
-
-  if (!isBcryptHash(user.passwordHash)) {
-    const passwordHash = await bcrypt.hash(password, PASSWORD_SALT_ROUNDS);
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { passwordHash },
-    });
-
-    user.passwordHash = passwordHash;
   }
 
   await ensureDefaultCatalog(prisma, user.id);
@@ -169,10 +121,8 @@ const updateProfile = async (
     throw new AppError("La sesión ya no es válida", 401, "INVALID_SESSION");
   }
 
-  const passwordMatches = await comparePassword(
-    currentPassword,
-    user.passwordHash,
-  );
+  const passwordMatches = isBcryptHash(user.passwordHash)
+    && await bcrypt.compare(currentPassword, user.passwordHash);
 
   if (!passwordMatches) {
     throw new AppError(
@@ -227,16 +177,11 @@ const updateProfile = async (
       );
     }
 
-    data.passwordHash = await bcrypt.hash(newPassword, PASSWORD_SALT_ROUNDS);
-  } else if (!isBcryptHash(user.passwordHash)) {
-    data.passwordHash = await bcrypt.hash(
-      currentPassword,
-      PASSWORD_SALT_ROUNDS,
-    );
+    data.passwordHash = await hashPassword(newPassword);
   }
 
   const updatedUser = await prisma.user.update({
-    where: { id: userId },
+    where: { id: userId, passwordHash: user.passwordHash },
     data,
   });
 
@@ -260,4 +205,5 @@ module.exports = {
   login,
   updateProfile,
   getPublicUser,
+  ensureDefaultCatalog,
 };

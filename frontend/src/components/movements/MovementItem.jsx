@@ -1,19 +1,19 @@
+const fullDateFormatter = new Intl.DateTimeFormat('es-PE', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+})
+const dayFormatter = new Intl.DateTimeFormat('es-PE', { day: '2-digit' })
+const monthFormatter = new Intl.DateTimeFormat('es-PE', { month: 'short' })
+
 function MovementItem({ movement, onEdit, onDelete, formatMoney }) {
   const movementDate = movement.date ? new Date(movement.date) : null
   const formattedDate = movementDate
-    ? new Intl.DateTimeFormat('es-PE', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      }).format(movementDate)
+    ? fullDateFormatter.format(movementDate)
     : ''
-  const movementDay = movementDate
-    ? new Intl.DateTimeFormat('es-PE', { day: '2-digit' }).format(movementDate)
-    : '--'
+  const movementDay = movementDate ? dayFormatter.format(movementDate) : '--'
   const movementMonth = movementDate
-    ? new Intl.DateTimeFormat('es-PE', { month: 'short' })
-        .format(movementDate)
-        .replace('.', '')
+    ? monthFormatter.format(movementDate).replace('.', '')
     : 'sin fecha'
 
   return (
