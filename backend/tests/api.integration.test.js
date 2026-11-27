@@ -265,7 +265,7 @@ test("PostgreSQL aplica CHECK, unicidad y claves foráneas del esquema actual", 
     ["23514", "monto de movimiento positivo", () => insertMovement("0", alice.account.id)],
     ["23514", "saldo inicial no negativo", () => prisma.$executeRaw`
       UPDATE "Account" SET "initialBalance" = -1 WHERE "id" = ${alice.account.id}::uuid`],
-    ["23514", "tipo de categoría válido", () => prisma.$executeRaw`
+    ["22P02", "tipo de categoría válido en el enum", () => prisma.$executeRaw`
       UPDATE "Category" SET "type" = 'INVALID' WHERE "id" = ${alice.expense.id}::uuid`],
     ["23514", "día de recordatorio válido", () => insertReminder(32, "10")],
     ["23514", "monto de recordatorio positivo", () => insertReminder(31, "-5")],
@@ -337,4 +337,29 @@ test("el inicio de sesión limita intentos y envía Retry-After", async () => {
   }
   assert.equal(response.status, 429);
   assert.ok(Number(response.headers.get("retry-after")) > 0);
+});
+
+test("las referencias compuestas impiden cruces de usuario y tipo también por SQL", async () => {
+  const insert = (categoryId, paymentMethodId, accountId, amount = "25.00") => prisma.$executeRaw`
+    INSERT INTO "Movement" ("id", "type", "amount", "userId", "categoryId", "paymentMethodId", "accountId")
+    VALUES (${randomUUID()}::uuid, 'EXPENSE', ${amount}::numeric, ${alice.user.id}::uuid,
+      ${categoryId}::uuid, ${paymentMethodId}::uuid, ${accountId}::uuid)
+  `;
+  for (const ids of [
+    [bob.expense.id, alice.method.id, alice.account.id],
+    [alice.expense.id, bob.method.id, alice.account.id],
+    [alice.expense.id, alice.method.id, bob.account.id],
+    [alice.income.id, alice.method.id, alice.account.id],
+  ]) {
+    await assert.rejects(async () => insert(...ids), (error) => error.meta?.code === "23503");
+  }
+  await assert.rejects(
+    async () => insert(alice.expense.id, alice.method.id, alice.account.id, "NaN"),
+    (error) => error.meta?.code === "23514",
+  );
+  await assert.rejects(
+    async () => prisma.$executeRaw`DELETE FROM "Account" WHERE id = ${bob.account.id}::uuid`,
+    (error) => error.meta?.code === "23503",
+  );
+  assert.ok(await prisma.account.findUnique({ where: { id: bob.account.id } }));
 });

@@ -10,6 +10,7 @@ const { databaseUrl, prismaCli } = require("./test-database");
 const upgradeUrl = databaseUrl("CONTROLA_TEST_UPGRADE_URL", "controla_stage1_upgrade");
 const prisma = new PrismaClient({ datasourceUrl: upgradeUrl });
 const integrityMigration = "20261023181837_harden_database_integrity";
+const ownerMigration = "20261127182000_enforce_movement_references";
 
 after(() => prisma.$disconnect());
 
@@ -39,9 +40,11 @@ test("actualizar desde las cuatro migraciones previas conserva los movimientos h
   const account = await prisma.account.create({
     data: { userId: user.id, name: "Cuenta histórica", initialBalance: "500.00" },
   });
-  const category = await prisma.category.create({
-    data: { userId: user.id, name: "Comida", type: "EXPENSE" },
-  });
+  const category = { id: randomUUID() };
+  await prisma.$executeRaw`
+    INSERT INTO "Category" (id, name, "type", "userId")
+    VALUES (${category.id}::uuid, 'Comida', 'EXPENSE', ${user.id}::uuid)
+  `;
   const method = await prisma.paymentMethod.create({
     data: { userId: user.id, name: "Efectivo" },
   });
@@ -75,6 +78,7 @@ test("actualizar desde las cuatro migraciones previas conserva los movimientos h
   const after = await appliedMigrations();
   assert.deepEqual(after.slice(0, before.length), before);
   assert.ok(after.some(({ migration_name }) => migration_name === integrityMigration));
+  assert.ok(after.some(({ migration_name }) => migration_name === ownerMigration));
   for (const expected of [unassigned, assigned]) {
     const actual = await prisma.movement.findUniqueOrThrow({ where: { id: expected.id } });
     assert.deepEqual(actual, expected);

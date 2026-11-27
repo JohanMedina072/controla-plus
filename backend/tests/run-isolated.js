@@ -9,6 +9,7 @@ const { prismaCli } = require("./test-database");
 const backend = path.resolve(__dirname, "..");
 const host = "127.0.0.1";
 const integrityMigration = "20261023181837_harden_database_integrity";
+const ownerMigration = "20261127182000_enforce_movement_references";
 const browser = process.argv.includes("--browser");
 
 function pg(command) {
@@ -50,7 +51,7 @@ function availablePort() {
   });
 }
 
-function copyBaseline(target) {
+function copyBaseline(target, excludedMigration) {
   const source = path.join(backend, "prisma");
   const migrations = path.join(source, "migrations");
   const destination = path.join(target, "migrations");
@@ -59,7 +60,7 @@ function copyBaseline(target) {
   fs.copyFileSync(path.join(migrations, "migration_lock.toml"), path.join(destination, "migration_lock.toml"));
 
   for (const entry of fs.readdirSync(migrations, { withFileTypes: true })) {
-    if (entry.isDirectory() && entry.name < integrityMigration) {
+    if (entry.isDirectory() && entry.name < excludedMigration) {
       fs.cpSync(path.join(migrations, entry.name), path.join(destination, entry.name), { recursive: true });
     }
   }
@@ -107,11 +108,14 @@ async function main() {
       "-X", "-w", "-h", host, "-p", String(port), "-U", username, "-d", "postgres",
       "-v", "ON_ERROR_STOP=1", "-c", "CREATE DATABASE controla_stage1_clean",
       "-c", "CREATE DATABASE controla_stage1_upgrade",
+      "-c", "CREATE DATABASE controla_stage1_preflight",
     ], { env: { ...process.env, PGPASSWORD: password } });
 
     const clean = `postgresql://${username}:${password}@${host}:${port}/controla_stage1_clean`;
     const upgrade = new URL(clean);
     upgrade.pathname = "/controla_stage1_upgrade";
+    const preflight = new URL(clean);
+    preflight.pathname = "/controla_stage1_preflight";
     const emptyDotenv = path.join(root, "empty.env");
     fs.writeFileSync(emptyDotenv, "");
     const env = {
@@ -120,6 +124,7 @@ async function main() {
       DOTENV_CONFIG_PATH: emptyDotenv,
       DATABASE_URL: clean,
       CONTROLA_TEST_UPGRADE_URL: upgrade.href,
+      CONTROLA_TEST_PREFLIGHT_URL: preflight.href,
       JWT_SECRET: randomBytes(32).toString("hex"),
       JWT_EXPIRES_IN: "1h",
     };
@@ -128,13 +133,23 @@ async function main() {
     run(process.execPath, [prismaCli, "migrate", "deploy"], { env });
 
     const baseline = path.join(root, "baseline");
-    copyBaseline(baseline);
+    copyBaseline(baseline, integrityMigration);
     run(process.execPath, [prismaCli, "migrate", "deploy", "--schema", "schema.prisma"], {
       cwd: baseline,
       env: { ...env, DATABASE_URL: upgrade.href },
     });
 
-    const tests = ["tests/api.integration.test.js", "tests/upgrade.integration.test.js"];
+    const beforeOwner = path.join(root, "before-owner");
+    copyBaseline(beforeOwner, ownerMigration);
+    run(process.execPath, [prismaCli, "migrate", "deploy", "--schema", "schema.prisma"], {
+      cwd: beforeOwner,
+      env: { ...env, DATABASE_URL: preflight.href },
+    });
+
+    const tests = [
+      "tests/api.integration.test.js", "tests/upgrade.integration.test.js",
+      "tests/preflight.integration.test.js", "tests/roles.integration.test.js",
+    ];
     if (browser) {
       const frontend = path.resolve(backend, "../frontend");
       env.CONTROLA_TEST_FRONTEND = path.join(root, "frontend");
