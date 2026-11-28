@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<title>Flujo de respaldo y recuperación de Controla+</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #eaf0f4; color: #172b3b; font: 18px/1.35 "Segoe UI", sans-serif; }
+  main { width: 1130px; margin: auto; background: #fff; border-top: 9px solid #126d66; padding: 35px 48px 38px; }
+  h1 { font-size: 40px; margin: 0 0 5px; letter-spacing: -.5px; }
+  header p { margin: 0 0 29px; color: #456076; }
+  .step { display: flex; align-items: center; gap: 18px; padding: 12px 20px; width: 760px; margin: auto;
+          border: 1.5px solid #bed7d4; border-radius: 12px; background: #f1f9f7; }
+  .number { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 40px;
+            background: #126d66; color: white; border-radius: 50%; font-weight: 700; }
+  h2 { font-size: 21px; line-height: 1.2; margin: 0 0 4px; }
+  .step p, .branch p { margin: 0; color: #395268; }
+  .arrow { text-align: center; font-size: 26px; font-weight: 700; line-height: 1.02; color: #126d66; }
+  .check { width: 520px; margin: auto; border: 2px solid #126d66; border-radius: 20px;
+           padding: 12px 16px; background: #e4f2ef; text-align: center; font-weight: 700; }
+  .branches { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 0 37px; text-align: center; }
+  .junction { height: 22px; margin: auto; width: 49%; border: 2px solid #628683; border-bottom: 0;
+              border-radius: 8px 8px 0 0; position: relative; }
+  .junction::before { content: ""; position: absolute; top: -13px; left: 50%; height: 13px; border-left: 2px solid #628683; }
+  .check { margin-bottom: 12px; }
+  .branch { text-align: left; padding: 14px 17px; border: 1.5px solid #bed7d4; border-radius: 11px; background: #f2f8f6; }
+  .branch.hold { background: #fff7ed; border-color: #e6c8a5; }
+  .branch h2 { color: #12645c; }
+  .hold h2 { color: #824a20; }
+</style>
+<main>
+  <header><h1>Flujo de respaldo y recuperación</h1><p>Procedimiento operativo de Controla+</p></header>
+  <div class="step"><span class="number">1</span><div><h2>Generar la copia cifrada</h2><p>Obtener una copia lógica de PostgreSQL y cifrarla con AES-256-GCM.</p></div></div>
+  <div class="arrow" aria-hidden="true">↓</div>
+  <div class="step"><span class="number">2</span><div><h2>Registrar y resguardar</h2><p>Registrar fecha, tamaño y huella SHA-256. Mantener la clave separada.</p></div></div>
+  <div class="arrow" aria-hidden="true">↓</div>
+  <div class="step"><span class="number">3</span><div><h2>Autenticar y restaurar la copia</h2><p>Verificar el cifrado y restaurar en una base aislada, vacía y autorizada.</p></div></div>
+  <div class="arrow" aria-hidden="true">↓</div>
+  <div class="step"><span class="number">4</span><div><h2>Validar el destino</h2><p>Comparar conteos e importes, verificar restricciones y reaplicar permisos.</p></div></div>
+  <div class="arrow" aria-hidden="true">↓</div>
+  <div class="check">¿Coinciden los resultados de integridad?</div>
+  <div class="junction" aria-hidden="true"></div>
+  <div class="branches">
+    <div class="branch"><h2>Sí · Recuperar el servicio</h2><p>Autorizar el cambio de conexión y comprobar el funcionamiento de la aplicación.</p></div>
+    <div class="branch hold"><h2>No · Mantener el origen</h2><p>Registrar la diferencia, revisar la copia y repetir el ensayo en un destino aislado.</p></div>
+  </div>
+</main>
